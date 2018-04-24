@@ -65,10 +65,11 @@ class ImageNetInput(object):
     transpose_input: 'bool' for whether to use the double transpose trick
   """
 
-  def __init__(self, is_training, data_dir, transpose_input=True):
+  def __init__(self, is_training, data_dir, use_bfloat, transpose_input=True):
     self.image_preprocessing_fn = resnet_preprocessing.preprocess_image
     self.is_training = is_training
     self.data_dir = data_dir
+    self.use_bfloat = use_bfloat
     self.transpose_input = transpose_input
 
   def dataset_parser(self, value):
@@ -106,7 +107,8 @@ class ImageNetInput(object):
     label = tf.cast(
         tf.reshape(parsed['image/class/label'], shape=[]), dtype=tf.int32) - 1
 
-    image = tf.cast(image, tf.bfloat16)
+    if self.use_bfloat:
+      image = tf.cast(image, tf.bfloat16)
 
     return image, label
 

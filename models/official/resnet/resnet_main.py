@@ -12,7 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Train a ResNet-50 model on ImageNet on TPU."""
+"""Train a ResNet-50 model on ImageNet on TPU.
+
+python resnet_main.py \
+  --tpu_name=$TPU_NAME \
+  --data_dir=$DATA_DIR \
+  --model_dir=$MODEL_DIR \
+  --resnet_depth=50
+
+
+
+python3 tpu/models/official/resnet/resnet_main.py \
+  --use_tpu=false \
+  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
+  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
+  --resnet_depth=50 \
+  --train_batch_size 4 \
+  --eval_batch_size 4
+
+rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/official/resnet/resnet_main.py \
+  --use_tpu=false \
+  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
+  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
+  --resnet_depth=v2_50 \
+  --train_batch_size 4 \
+  --eval_batch_size 4
+
+rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/official/resnet/resnet_main.py \
+  --use_tpu=false \
+  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
+  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
+  --resnet_depth=paper-v2_50 \
+  --train_batch_size 4 \
+  --eval_batch_size 4
+
+"""
+
 
 from __future__ import absolute_import
 from __future__ import division
@@ -27,8 +62,8 @@ import tensorflow as tf
 
 import imagenet_input
 import resnet_model
+import resnet_v2_model
 from tensorflow.contrib import summary
-from tensorflow.contrib.tpu.python.tpu import bfloat16
 from tensorflow.contrib.tpu.python.tpu import tpu_config
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
@@ -75,14 +110,9 @@ flags.DEFINE_string(
     help=('The directory where the model and training/evaluation summaries are'
           ' stored.'))
 
-flags.DEFINE_integer(
-    'resnet_depth', default=50,
-    help=('Depth of ResNet model to use. Must be one of {18, 34, 50, 101, 152,'
-          ' 200}. ResNet-18 and 34 use the pre-activation residual blocks'
-          ' without bottleneck layers. The other models use pre-activation'
-          ' bottleneck layers. Deeper models require more training time and'
-          ' more memory and may require reducing --train_batch_size to prevent'
-          ' running out of memory.'))
+flags.DEFINE_string(
+    'resnet_depth', default="50",
+    help=('either the depth to use or [v2_50, ...]'))
 
 flags.DEFINE_string(
     'mode', default='train_and_eval',
@@ -131,7 +161,7 @@ flags.DEFINE_integer(
 flags.DEFINE_string(
     'data_format', default='channels_last',
     help=('A flag to override the data format used in the model. The value'
-          ' is either channels_first or channels_last. To run the network on'
+          ' is either channels_first or channels_last. To run the model on'
           ' CPU or TPU, channels_last should be used. For GPU, channels_first'
           ' will improve performance.'))
 
@@ -210,11 +240,41 @@ def resnet_model_fn(features, labels, mode, params):
   if FLAGS.transpose_input:
     features = tf.transpose(features, [3, 0, 1, 2])  # HWCN to NHWC
 
-  with bfloat16.bfloat16_scope():
-    network = resnet_model.resnet_v1(
-        resnet_depth=FLAGS.resnet_depth,
-        num_classes=LABEL_CLASSES,
-        data_format=FLAGS.data_format)
+  if FLAGS.use_tpu:
+    import bfloat16
+    scope_fn = lambda: bfloat16.bfloat16_scope()
+  else:
+    scope_fn = lambda: tf.variable_scope("")
+
+  with scope_fn():
+    if FLAGS.resnet_depth in ["18", "34", "50", "101", "152", "200"]:
+      network = resnet_model.resnet_v1(
+          resnet_depth=int(FLAGS.resnet_depth),
+          num_classes=LABEL_CLASSES,
+          data_format=FLAGS.data_format)
+    elif FLAGS.resnet_depth.startswith("v2_"):
+      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
+      network = resnet_v2_model.resnet_v2(
+          resnet_size=resnet_size,
+          num_classes=LABEL_CLASSES,
+          feature_attention=False,
+          data_format=FLAGS.data_format)
+    elif FLAGS.resnet_depth.startswith("paper-v2_"):
+      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
+      network = resnet_v2_model.resnet_v2(
+          resnet_size=resnet_size,
+          num_classes=LABEL_CLASSES,
+          feature_attention="paper",
+          data_format=FLAGS.data_format)
+    elif FLAGS.resnet_depth.startswith("fc-v2_"):
+      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
+      network = resnet_v2_model.resnet_v2(
+          resnet_size=resnet_size,
+          num_classes=LABEL_CLASSES,
+          feature_attention="fc",
+          data_format=FLAGS.data_format)
+    else:
+      assert False
 
     logits = network(
         inputs=features, is_training=(mode == tf.estimator.ModeKeys.TRAIN))
@@ -402,10 +462,12 @@ def main(unused_argv):
   imagenet_train = imagenet_input.ImageNetInput(
       is_training=True,
       data_dir=FLAGS.data_dir,
+      use_bfloat=FLAGS.use_tpu,
       transpose_input=FLAGS.transpose_input)
   imagenet_eval = imagenet_input.ImageNetInput(
       is_training=False,
       data_dir=FLAGS.data_dir,
+      use_bfloat=FLAGS.use_tpu,
       transpose_input=FLAGS.transpose_input)
 
   if FLAGS.mode == 'eval':
