@@ -262,14 +262,14 @@ def resnet_model_fn(features, labels, mode, params):
 
   with scope_fn():
     if FLAGS.resnet_depth in ["18", "34", "50", "101", "152", "200"]:
-      print("USING RESNET V1 {}".format(FLAGS.resnet_depth))
+      print("\n\n\n\n\nUSING RESNET V1 {}\n\n\n\n\n".format(FLAGS.resnet_depth))
       network = resnet_model.resnet_v1(
           resnet_depth=int(FLAGS.resnet_depth),
           num_classes=LABEL_CLASSES,
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("v2_"):
       resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
-      print("USING RESNET V2 {}".format(resnet_size))
+      print("\n\n\n\n\nUSING RESNET V2 {}\n\n\n\n\n".format(resnet_size))
       network = resnet_v2_model.resnet_v2(
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
@@ -277,7 +277,7 @@ def resnet_model_fn(features, labels, mode, params):
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("paper-v2_"):
       resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
-      print("USING RESNET V2 (Paper) {}".format(resnet_size))
+      print("\n\n\n\n\nUSING RESNET V2 (Paper) {}\n\n\n\n\n".format(resnet_size))
       network = resnet_v2_model.resnet_v2(
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
@@ -285,7 +285,7 @@ def resnet_model_fn(features, labels, mode, params):
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("fc-v2_"):
       resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
-      print("USING RESNET V2 (fc) {}".format(resnet_size))
+      print("\n\n\n\n\nUSING RESNET V2 (fc) {}\n\n\n\n\n".format(resnet_size))
       network = resnet_v2_model.resnet_v2(
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
