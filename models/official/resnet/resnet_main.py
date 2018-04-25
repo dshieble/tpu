@@ -540,7 +540,7 @@ def main(unused_argv):
         next_checkpoint = min(current_step + FLAGS.steps_per_eval,
                               FLAGS.train_steps)
         resnet_classifier.train(
-            input_fn=imagenet_train.input_fn, max_steps=next_checkpoint)
+            input_fn=imagenet_train.input_fn, max_steps=int(next_checkpoint))
         current_step = next_checkpoint
 
         # Evaluate the model on the most recent model in --model_dir.
