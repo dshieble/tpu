@@ -20,24 +20,6 @@ python resnet_main.py \
   --model_dir=$MODEL_DIR \
   --resnet_depth=50
 
-
-
-python3 tpu/models/official/resnet/resnet_main.py \
-  --use_tpu=false \
-  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
-  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
-  --resnet_depth=50 \
-  --train_batch_size 4 \
-  --eval_batch_size 4
-
-rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/official/resnet/resnet_main.py \
-  --use_tpu=false \
-  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
-  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
-  --resnet_depth=v2_50 \
-  --train_batch_size 4 \
-  --eval_batch_size 4
-
 rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/official/resnet/resnet_main.py \
   --use_tpu=false \
   --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
@@ -45,6 +27,36 @@ rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/o
   --resnet_depth=paper-v2_50 \
   --train_batch_size 4 \
   --eval_batch_size 4
+
+
+
+----------------------------------------
+
+python3 models/official/resnet/resnet_main.py \
+  --use_tpu=false \
+  --data_dir= /media/data_cifs/clicktionary/clickme_experiment/tf_records/ \
+  --model_dir=/mnt/disks/data_cifs/performances/cpu-paper-v2_50 \
+  --resnet_depth=paper-v2_50 \
+  --train_batch_size 4 \
+  --eval_batch_size 4
+
+python3 models/official/resnet/resnet_main.py \
+  --tpu_name=demo-tpu \
+  --data_dir=gs://imagenet_data/train \
+  --model_dir=/mnt/disks/data_cifs/performances/tpu-50 \
+  --resnet_depth=50
+
+python3 models/official/resnet/resnet_main.py \
+  --tpu_name=demo-tpu \
+  --data_dir=gs://imagenet_data/train \
+  --model_dir=/mnt/disks/data_cifs/performances/tpu-v2_50 \
+  --resnet_depth=v2_50
+
+
+------------------------------------------------------------
+
+
+
 
 """
 
