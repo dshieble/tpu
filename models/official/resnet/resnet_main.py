@@ -201,6 +201,11 @@ flags.DEFINE_bool(
     'transpose_input', default=True,
     help='Use TPU double transpose optimization')
 
+flags.DEFINE_integer(
+    'clip_gradients', default=0,
+    help='if 0 dont clip')
+
+
 flags.DEFINE_string(
     'export_dir',
     default=None,
@@ -375,13 +380,14 @@ def resnet_model_fn(features, labels, mode, params):
 
 
 
-
-      # train_op = optimizer.minimize(loss, global_step)
-
-
-      gradients, variables = zip(*optimizer.compute_gradients(loss))
-      gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
-      train_op = optimizer.apply_gradients(zip(gradients, variables))
+      if FLAGS.clip_gradients == 0:
+        print("\nnot clipping gradients\n")
+        train_op = optimizer.minimize(loss, global_step)
+      else:
+        print("\nclipping gradients\n")
+        gradients, variables = zip(*optimizer.compute_gradients(loss))
+        gradients, _ = tf.clip_by_global_norm(gradients, FLAGS.clip_gradients)
+        train_op = optimizer.apply_gradients(zip(gradients, variables))
 
       # gvs = optimizer.compute_gradients(loss)
       # gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
