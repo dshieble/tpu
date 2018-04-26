@@ -41,14 +41,14 @@ python3 models/official/resnet/resnet_main.py \
   --eval_batch_size 4
 
 gsutil mkdir gs://performances-tpu-50
-python3 models/official/resnet/resnet_main.py \
+git pull; python3 models/official/resnet/resnet_main.py \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-50 \
   --resnet_depth=50
 
 gsutil mkdir gs://performances-tpu-v2_50
-python3 models/official/resnet/resnet_main.py \
+git pull; python3 models/official/resnet/resnet_main.py \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-v2_50 \
@@ -530,7 +530,7 @@ def main(unused_argv):
     start_timestamp = time.time()  # This time will include compilation time
     if FLAGS.mode == 'train':
       resnet_classifier.train(
-          input_fn=imagenet_train.input_fn, max_steps=FLAGS.train_steps)
+          input_fn=imagenet_train.input_fn, max_steps=int(FLAGS.train_steps))
 
     else:
       assert FLAGS.mode == 'train_and_eval'
