@@ -459,8 +459,8 @@ def resnet_model_fn(features, labels, mode, params):
 
 def main(unused_argv):
   
-
-  FLAGS._parse_flags()
+  import sys
+  FLAGS(sys.argv)
 
 
   tpu_grpc_url = None
