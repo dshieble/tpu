@@ -38,22 +38,28 @@ python3 models/official/resnet/resnet_main.py \
   --model_dir=/mnt/disks/data_cifs/performances/cpu-paper-v2_50 \
   --resnet_depth=paper-v2_50 \
   --train_batch_size 4 \
-  --eval_batch_size 4
+  --eval_batch_size 4 | tee output.txt
 
 gsutil mkdir gs://performances-tpu-50
 git pull; python3 models/official/resnet/resnet_main.py \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-50 \
-  --resnet_depth=50
+  --resnet_depth=50 | tee -a performances-tpu-50.txt
 
 gsutil mkdir gs://performances-tpu-v2_50
 git pull; python3 models/official/resnet/resnet_main.py \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-v2_50 \
-  --resnet_depth=v2_50
+  --resnet_depth=v2_50 | tee -a performances-tpu-v2_50
 
+gsutil mkdir gs://performances-tpu-paper-v2_50
+git pull; python3 models/official/resnet/resnet_main.py \
+  --tpu_name=demo-tpu \
+  --data_dir=gs://imagenet_data/train \
+  --model_dir=gs://performances-tpu-paper-v2_50\
+  --resnet_depth=paper-v2_50 | tee -a performances-tpu-paper-v2_50
 
 ------------------------------------------------------------
 

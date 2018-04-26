@@ -713,12 +713,12 @@ class DrewResnet:
       var = tf.get_variable(
             name=var_name,
             shape=value[0],
-            initializer=value[1],
+            initializer=lambda: value[1],
             trainable=self.trainable)
     else:
       var = tf.get_variable(
             name=var_name,
-            initializer=value,
+            initializer=lambda: value,
             trainable=self.trainable)
     # self.var_dict[(name, idx)] = var
     return var
