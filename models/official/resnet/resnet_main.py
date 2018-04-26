@@ -376,10 +376,10 @@ def resnet_model_fn(features, labels, mode, params):
 
 
       
-      # train_op = optimizer.minimize(loss, global_step)
-      gvs = optimizer.compute_gradients(loss)
-      capped_gvs = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in gvs]
-      train_op = optimizer.apply_gradients(capped_gvs, global_step=global_step)
+      train_op = optimizer.minimize(loss, global_step)
+      # gvs = optimizer.compute_gradients(loss)
+      # capped_gvs = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in gvs]
+      # train_op = optimizer.apply_gradients(capped_gvs, global_step=global_step)
 
 
     if not FLAGS.skip_host_call:
