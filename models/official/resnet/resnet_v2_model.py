@@ -245,22 +245,22 @@ class DrewResnet:
     if squash is not None:
       out_size = c
       output_activities = self.fc_layer(
-            bottom=intermediate_activities,
-            out_size=out_size,
-            name='%s_ATTENTION_output' % name,
-            training=training)
+        bottom=intermediate_activities,
+        out_size=out_size,
+        name='%s_ATTENTION_output' % name,
+        training=training)
 
     # 4. Add batch_norm to scaled activities
     if self.use_batchnorm:
       bottom = tf.layers.batch_normalization(
-            inputs=bottom,
-            axis=3,
-            momentum=_BATCH_NORM_DECAY,
-            epsilon=_BATCH_NORM_EPSILON,
-            center=True,
-            scale=True,
-            training=training,
-            fused=True)
+        inputs=bottom,
+        axis=3,
+        momentum=_BATCH_NORM_DECAY,
+        epsilon=_BATCH_NORM_EPSILON,
+        center=True,
+        scale=True,
+        training=training,
+        fused=True)
 
     # 5. Scale bottom with output_activities
     exp_activities = tf.expand_dims(

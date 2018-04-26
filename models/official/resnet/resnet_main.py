@@ -21,6 +21,7 @@ python resnet_main.py \
   --resnet_depth=50
 
 rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/official/resnet/resnet_main.py \
+  --iterations_per_loop=1 \
   --use_tpu=false \
   --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
   --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
@@ -30,7 +31,7 @@ rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/offic
 
 ----------------------------------------
 
-git pull; CUDA_VISIBLE_DEVICES=0; python3 models/official/resnet/resnet_main.py \
+git pull; CUDA_VISIBLE_DEVICES=0; python models/official/resnet/resnet_main.py \
   --use_tpu=false \
   --data_dir=/media/data_cifs/fake_imagenet \
   --model_dir=/media/data_cifs/resnet-tpu-paper-v2_50 \
@@ -588,4 +589,5 @@ def main(unused_argv):
 
 if __name__ == '__main__':
   tf.logging.set_verbosity(tf.logging.INFO)
+  FLAGS = flags.FLAGS
   tf.app.run()
