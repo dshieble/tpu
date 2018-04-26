@@ -280,7 +280,8 @@ def resnet_model_fn(features, labels, mode, params):
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
           feature_attention=False,
-          data_format=FLAGS.data_format)
+          data_format=FLAGS.data_format,
+          use_tpu=FLAGS.use_tpu)
     elif FLAGS.resnet_depth.startswith("paper-v2_"):
       resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
       print("\n\n\n\n\nUSING RESNET V2 (Paper) {}\n\n\n\n\n".format(resnet_size))
@@ -288,7 +289,8 @@ def resnet_model_fn(features, labels, mode, params):
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
           feature_attention="paper",
-          data_format=FLAGS.data_format)
+          data_format=FLAGS.data_format,
+          use_tpu=FLAGS.use_tpu)
     elif FLAGS.resnet_depth.startswith("fc-v2_"):
       resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
       print("\n\n\n\n\nUSING RESNET V2 (fc) {}\n\n\n\n\n".format(resnet_size))
@@ -296,7 +298,8 @@ def resnet_model_fn(features, labels, mode, params):
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
           feature_attention="fc",
-          data_format=FLAGS.data_format)
+          data_format=FLAGS.data_format,
+          use_tpu=FLAGS.use_tpu)
     else:
       assert False
 

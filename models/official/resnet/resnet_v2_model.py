@@ -23,15 +23,15 @@ import tensorflow as tf
 
 
 def resnet_v2(
-    resnet_size, num_classes, feature_attention, data_format, apply_to="input", extra_convs=2):
+    resnet_size, num_classes, feature_attention, data_format, use_tpu, apply_to="input", extra_convs=2):
   return resnet_v2_generator(
     resnet_size=resnet_size, num_classes=num_classes,
-    feature_attention=feature_attention, data_format=data_format,
+    feature_attention=feature_attention, data_format=data_format, use_tpu=use_tpu,
     apply_to=apply_to, extra_convs=extra_convs)
 
 
 def resnet_v2_generator(
-    resnet_size, num_classes, feature_attention, data_format, apply_to, extra_convs):
+    resnet_size, num_classes, feature_attention, data_format, use_tpu, apply_to, extra_convs):
   """Generator for ResNet v1 models.
   A
 rgs:
@@ -55,7 +55,8 @@ rgs:
                 trainable=True,
                 apply_to=apply_to,
                 extra_convs=extra_convs,
-                resnet_size=resnet_size)
+                resnet_size=resnet_size,
+                use_tpu=use_tpu)
     logits = drew_resnet.build(
         inputs,
         output_shape=num_classes,
@@ -93,7 +94,8 @@ class DrewResnet:
       output_layer='final_dense',
       human_score_layer='final_avg_pool',
       probability_layer='prob',
-      use_batchnorm=False):
+      use_batchnorm=False,
+      use_tpu=False):
     assert weight_path is None
     self.resnet_size = resnet_size
     block_sizes = _get_block_sizes(resnet_size)
@@ -124,6 +126,7 @@ class DrewResnet:
     self.output_layer = output_layer
     self.probability_layer = probability_layer
     self.use_batchnorm = use_batchnorm
+    self.use_tpu = use_tpu
     self.apply_to = apply_to
     self.trainable = trainable
     self.squash = squash
@@ -260,7 +263,8 @@ class DrewResnet:
         tf.expand_dims(output_activities, 1), 1)
     if return_map:
       return exp_activities
-    scaled_bottom = bottom * tf.cast(exp_activities, dtype=bottom.dtype)
+    # scaled_bottom = bottom * tf.cast(exp_activities, dtype=bottom.dtype)
+    scaled_bottom = bottom * exp_activities
 
     # 6. Add a loss term to compare scaled activity to clickmaps
     if combine == 'sum_abs':
@@ -700,13 +704,15 @@ class DrewResnet:
       name=name + "_weights",
       shape=[in_size, out_size],
       # initializer=tf.contrib.layers.xavier_initializer(uniform=False),
-      trainable=self.trainable)
+      trainable=self.trainable,
+      dtype=tf.bfloat16 if self.use_tpu else tf.float32)
 
     biases = tf.get_variable(
       name=name + "_biases",
       shape=out_size,
       # initializer=tf.truncated_normal_initializer(.0, .001),
-      trainable=self.trainable)
+      trainable=self.trainable,
+      dtype=tf.bfloat16 if self.use_tpu else tf.float32)
     return weights, biases
 
   # def get_var(
