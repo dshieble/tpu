@@ -348,7 +348,7 @@ def resnet_model_fn(features, labels, mode, params):
       [tf.nn.l2_loss(v) for v in tf.trainable_variables()
        if 'batch_normalization' not in v.name])
 
-  with tf.device("\cpu:0"):
+  with tf.device("/cpu:0"):
     loss = tf.Print(loss, [loss], "loss", summarize=20)
 
   host_call = None
