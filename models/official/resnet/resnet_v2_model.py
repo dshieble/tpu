@@ -618,52 +618,52 @@ class DrewResnet:
         block_id='%s_%s' % (name, idx))
     return tf.identity(inputs, name)
 
-    def conv_layer(
-            self,
-            bottom,
-            in_channels=None,
-            out_channels=None,
-            name=None,
-            training=True,
-            stride=1,
-            filter_size=3):
-      """Method for creating a convolutional layer."""
-      assert name is not None, 'Supply a name for your operation.'
-      if in_channels is None:
-        in_channels = int(bottom.get_shape()[-1])
-      with tf.variable_scope(name):
-        filt, conv_biases = self.get_conv_var(
-              filter_size=filter_size,
-              in_channels=in_channels,
-              out_channels=out_channels,
-              name=name)
-        conv = tf.nn.conv2d(
-              bottom,
-              filt,
-              [1, stride, stride, 1],
-              padding='SAME')
-        bias = tf.nn.bias_add(conv, conv_biases)
-        return bias
+    # def conv_layer(
+    #         self,
+    #         bottom,
+    #         in_channels=None,
+    #         out_channels=None,
+    #         name=None,
+    #         training=True,
+    #         stride=1,
+    #         filter_size=3):
+    #   """Method for creating a convolutional layer."""
+    #   assert name is not None, 'Supply a name for your operation.'
+    #   if in_channels is None:
+    #     in_channels = int(bottom.get_shape()[-1])
+    #   with tf.variable_scope(name):
+    #     filt, conv_biases = self.get_conv_var(
+    #           filter_size=filter_size,
+    #           in_channels=in_channels,
+    #           out_channels=out_channels,
+    #           name=name)
+    #     conv = tf.nn.conv2d(
+    #           bottom,
+    #           filt,
+    #           [1, stride, stride, 1],
+    #           padding='SAME')
+    #     bias = tf.nn.bias_add(conv, conv_biases)
+    #     return bias
 
-    def get_conv_var(
-        self,
-        filter_size,
-        in_channels,
-        out_channels,
-        name,
-        init_type='xavier'):
-      if init_type == 'xavier':
-        weight_init = [
-          [filter_size, filter_size, in_channels, out_channels],
-          tf.contrib.layers.xavier_initializer_conv2d(uniform=False)]
-      else:
-        weight_init = tf.truncated_normal(
-          [filter_size, filter_size, in_channels, out_channels], 0.0, 0.001)
-      bias_init = tf.truncated_normal([out_channels], .0, .001)
-      filters = self.get_var(weight_init, name, 0, name + "_filters")
-      biases = self.get_var(bias_init, name, 1, name + "_biases")
+    # def get_conv_var(
+    #     self,
+    #     filter_size,
+    #     in_channels,
+    #     out_channels,
+    #     name,
+    #     init_type='xavier'):
+    #   if init_type == 'xavier':
+    #     weight_init = [
+    #       [filter_size, filter_size, in_channels, out_channels],
+    #       tf.contrib.layers.xavier_initializer_conv2d(uniform=False)]
+    #   else:
+    #     weight_init = tf.truncated_normal(
+    #       [filter_size, filter_size, in_channels, out_channels], 0.0, 0.001)
+    #   bias_init = tf.truncated_normal([out_channels], .0, .001)
+    #   filters = self.get_var(weight_init, name, 0, name + "_filters")
+    #   biases = self.get_var(bias_init, name, 1, name + "_biases")
 
-      return filters, biases
+    #   return filters, biases
 
   def fc_layer(
       self,
@@ -687,42 +687,52 @@ class DrewResnet:
           self,
           in_size,
           out_size,
-          name,
-          init_type='xavier'):
-    if init_type == 'xavier':
-      weight_init = [[in_size, out_size], tf.contrib.layers.xavier_initializer(uniform=False)]
-    else:
-      weight_init = tf.truncated_normal([in_size, out_size], 0.0, 0.001)
-    bias_init = tf.truncated_normal([out_size], .0, .001)
-    weights = self.get_var(weight_init, name, 0, name + "_weights")
-    biases = self.get_var(bias_init, name, 1, name + "_biases")
+          name):
+    # if init_type == 'xavier':
+    #   weight_init = [[in_size, out_size], tf.contrib.layers.xavier_initializer(uniform=False)]
+    # else:
+    #   weight_init = tf.truncated_normal([in_size, out_size], 0.0, 0.001)
+    # bias_init = tf.truncated_normal([out_size], .0, .001)
+    # weights = self.get_var(weight_init, name, 0, name + "_weights")
+    # biases = self.get_var(bias_init, name, 1, name + "_biases")
 
+    weights = tf.get_variable(
+      name=name + "_weights",
+      shape=[in_size, out_size],
+      initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+      trainable=self.trainable)
+
+    biases = tf.get_variable(
+      name=name + "_biases",
+      shape=out_size,
+      initializer=tf.truncated_normal_initializer(.0, .001),
+      trainable=self.trainable)
     return weights, biases
 
-  def get_var(
-          self,
-          initial_value,
-          name,
-          idx,
-          var_name,
-          in_size=None,
-          out_size=None):
-    with tf.control_dependencies(None):
-      value = initial_value
+  # def get_var(
+  #         self,
+  #         initial_value,
+  #         name,
+  #         idx,
+  #         var_name,
+  #         in_size=None,
+  #         out_size=None):
+  #   with tf.control_dependencies(None):
+  #     value = initial_value
 
-      if type(value) is list:
-        var = tf.get_variable(
-              name=var_name,
-              shape=value[0],
-              initializer=value[1],
-              trainable=self.trainable)
-      else:
-        var = tf.get_variable(
-              name=var_name,
-              initializer=value,
-              trainable=self.trainable)
-      # self.var_dict[(name, idx)] = var
-    return var
+  #     if type(value) is list:
+  #       var = tf.get_variable(
+  #             name=var_name,
+  #             shape=value[0],
+  #             initializer=value[1],
+  #             trainable=self.trainable)
+  #     else:
+  #       var = tf.get_variable(
+  #             name=var_name,
+  #             initializer=value,
+  #             trainable=self.trainable)
+  #     # self.var_dict[(name, idx)] = var
+  #   return var
 
 
 def _get_block_sizes(resnet_size):
