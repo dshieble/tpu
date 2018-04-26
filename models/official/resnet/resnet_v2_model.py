@@ -699,13 +699,13 @@ class DrewResnet:
     weights = tf.get_variable(
       name=name + "_weights",
       shape=[in_size, out_size],
-      initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+      # initializer=tf.contrib.layers.xavier_initializer(uniform=False),
       trainable=self.trainable)
 
     biases = tf.get_variable(
       name=name + "_biases",
       shape=out_size,
-      initializer=tf.truncated_normal_initializer(.0, .001),
+      # initializer=tf.truncated_normal_initializer(.0, .001),
       trainable=self.trainable)
     return weights, biases
 
