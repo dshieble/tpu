@@ -20,7 +20,7 @@ python resnet_main.py \
   --model_dir=$MODEL_DIR \
   --resnet_depth=50
 
-rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/official/resnet/resnet_main.py \
+rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/official/resnet/resnet_main.py \
   --use_tpu=false \
   --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
   --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
@@ -30,7 +30,7 @@ rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/o
 
 ----------------------------------------
 
-git pull; python models/official/resnet/resnet_main.py \
+git pull; CUDA_VISIBLE_DEVICES=0; python3 models/official/resnet/resnet_main.py \
   --use_tpu=false \
   --data_dir=/media/data_cifs/fake_imagenet \
   --model_dir=/media/data_cifs/resnet-tpu-paper-v2_50 \

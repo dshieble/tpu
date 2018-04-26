@@ -241,7 +241,6 @@ class DrewResnet:
     # intermediate_activities = tf.Print(
     #   intermediate_activities, [intermediate_activities], "intermediate_activities")
 
-
     # 3. FC layer with c / r channels + a nonlinearity
     if squash is not None:
       out_size = c
@@ -532,17 +531,17 @@ class DrewResnet:
           block_id=None):
     if self.apply_to == 'input':
       if feature_attention == 'paper':
-          inputs = self.feature_attention(
-                bottom=inputs,
-                name=block_id,
-                training=training)
+        inputs = self.feature_attention(
+          bottom=inputs,
+          name=block_id,
+          training=training)
       elif feature_attention == 'fc':
-          inputs = self.feature_attention_fc(
-                bottom=inputs,
-                name=block_id,
-                training=training,
-                squash=self.squash,
-                extra_convs=self.extra_convs)
+        inputs = self.feature_attention_fc(
+          bottom=inputs,
+          name=block_id,
+          training=training,
+          squash=self.squash,
+          extra_convs=self.extra_convs)
 
     shortcut = inputs
     inputs = self.batch_norm_relu(inputs, training, data_format)
@@ -682,6 +681,8 @@ class DrewResnet:
       name=None,
       activation=True,
       training=True):
+
+    bottom = tf.Print(bottom, [bottom], "fc layer {}".format(name), summarize=20)
 
     return tf.contrib.layers.fully_connected(bottom, out_size)
 
