@@ -238,8 +238,8 @@ class DrewResnet:
             name='%s_ATTENTION_intermediate' % name,
             training=training))
 
-    intermediate_activities = tf.Print(
-      intermediate_activities, [intermediate_activities], "intermediate_activities")
+    # intermediate_activities = tf.Print(
+    #   intermediate_activities, [intermediate_activities], "intermediate_activities")
 
 
     # 3. FC layer with c / r channels + a nonlinearity
@@ -682,43 +682,46 @@ class DrewResnet:
       name=None,
       activation=True,
       training=True):
-    """Method for creating a fully connected layer."""
-    assert name is not None, 'Supply a name for your operation.'
-    if in_size is None:
-      in_size = int(bottom.get_shape()[-1])
-    with tf.variable_scope(name):
-      weights, biases = self.get_fc_var(in_size, out_size, name)
-      x = tf.reshape(bottom, [-1, in_size])
-      fc = tf.nn.bias_add(tf.matmul(x, weights), biases)
-      return fc
 
-  def get_fc_var(
-          self,
-          in_size,
-          out_size,
-          name):
-    # if init_type == 'xavier':
-    #   weight_init = [[in_size, out_size], tf.contrib.layers.xavier_initializer(uniform=False)]
-    # else:
-    #   weight_init = tf.truncated_normal([in_size, out_size], 0.0, 0.001)
-    # bias_init = tf.truncated_normal([out_size], .0, .001)
-    # weights = self.get_var(weight_init, name, 0, name + "_weights")
-    # biases = self.get_var(bias_init, name, 1, name + "_biases")
+    return tf.contrib.layers.fully_connected(bottom, out_size)
 
-    weights = tf.get_variable(
-      name=name + "_weights",
-      shape=[in_size, out_size],
-      # initializer=tf.contrib.layers.xavier_initializer(uniform=False),
-      trainable=self.trainable,
-      dtype=tf.bfloat16 if self.use_tpu else tf.float32)
+    # """Method for creating a fully connected layer."""
+    # assert name is not None, 'Supply a name for your operation.'
+    # if in_size is None:
+    #   in_size = int(bottom.get_shape()[-1])
+    # with tf.variable_scope(name):
+    #   weights, biases = self.get_fc_var(in_size, out_size, name)
+    #   x = tf.reshape(bottom, [-1, in_size])
+    #   fc = tf.nn.bias_add(tf.matmul(x, weights), biases)
+    #   return fc
 
-    biases = tf.get_variable(
-      name=name + "_biases",
-      shape=out_size,
-      # initializer=tf.truncated_normal_initializer(.0, .001),
-      trainable=self.trainable,
-      dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-    return weights, biases
+  # def get_fc_var(
+  #         self,
+  #         in_size,
+  #         out_size,
+  #         name):
+  #   # if init_type == 'xavier':
+  #   #   weight_init = [[in_size, out_size], tf.contrib.layers.xavier_initializer(uniform=False)]
+  #   # else:
+  #   #   weight_init = tf.truncated_normal([in_size, out_size], 0.0, 0.001)
+  #   # bias_init = tf.truncated_normal([out_size], .0, .001)
+  #   # weights = self.get_var(weight_init, name, 0, name + "_weights")
+  #   # biases = self.get_var(bias_init, name, 1, name + "_biases")
+
+  #   weights = tf.get_variable(
+  #     name=name + "_weights",
+  #     shape=[in_size, out_size],
+  #     # initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+  #     trainable=self.trainable,
+  #     dtype=tf.bfloat16 if self.use_tpu else tf.float32)
+
+  #   biases = tf.get_variable(
+  #     name=name + "_biases",
+  #     shape=out_size,
+  #     # initializer=tf.truncated_normal_initializer(.0, .001),
+  #     trainable=self.trainable,
+  #     dtype=tf.bfloat16 if self.use_tpu else tf.float32)
+  #   return weights, biases
 
   # def get_var(
   #         self,
