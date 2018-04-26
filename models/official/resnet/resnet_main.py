@@ -380,7 +380,7 @@ def resnet_model_fn(features, labels, mode, params):
 
 
       gradients, variables = zip(*optimizer.compute_gradients(loss))
-      gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+      gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
       train_op = optimizer.apply_gradients(zip(gradients, variables))
 
       # gvs = optimizer.compute_gradients(loss)
