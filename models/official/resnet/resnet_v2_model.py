@@ -682,7 +682,7 @@ class DrewResnet:
       activation=True,
       training=True):
 
-    bottom = tf.Print(bottom, [bottom], "fc layer {}".format(name), summarize=20)
+    # bottom = tf.Print(bottom, [bottom], "fc layer {}".format(name), summarize=20)
 
     return tf.contrib.layers.fully_connected(bottom, out_size)
 
