@@ -65,6 +65,7 @@ git pull; python3 models/official/resnet/resnet_main.py \
 
 gsutil mkdir gs://performances-tpu-paper-v2_50
 git pull; python3 models/official/resnet/resnet_main.py \
+  --base_learning_rate=0.01 \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-paper-v2_50\
@@ -203,13 +204,18 @@ flags.DEFINE_string(
     default=None,
     help=('The directory where the exported SavedModel will be stored.'))
 
+flags.DEFINE_float(
+    'base_learning_rate',
+    default=0.1,
+    help=('base LR when batch size = 256.'))
+
+
 # Dataset constants
 LABEL_CLASSES = 1000
 NUM_TRAIN_IMAGES = 1281167
 NUM_EVAL_IMAGES = 50000
 
 # Learning hyperparameters
-BASE_LEARNING_RATE = 0.1     # base LR when batch size = 256
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
 LR_SCHEDULE = [    # (multiplier, epoch to start) tuples
@@ -233,7 +239,7 @@ def learning_rate_schedule(current_epoch):
   Returns:
     A scaled `Tensor` for current learning rate.
   """
-  scaled_lr = BASE_LEARNING_RATE * (FLAGS.train_batch_size / 256.0)
+  scaled_lr = FLAGS.base_learning_rate * (FLAGS.train_batch_size / 256.0)
 
   decay_rate = (scaled_lr * LR_SCHEDULE[0][0] *
                 current_epoch / LR_SCHEDULE[0][1])
