@@ -66,6 +66,7 @@ git pull; python3 models/official/resnet/resnet_main.py \
 
 gsutil mkdir gs://performances-tpu-paper-v2_50
 git pull; python3 models/official/resnet/resnet_main.py \
+  --iterations_per_loop=10 \
   --base_learning_rate=0.01 \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
@@ -346,6 +347,9 @@ def resnet_model_fn(features, labels, mode, params):
   loss = cross_entropy + WEIGHT_DECAY * tf.add_n(
       [tf.nn.l2_loss(v) for v in tf.trainable_variables()
        if 'batch_normalization' not in v.name])
+
+  with tf.device("\cpu:0"):
+    loss = tf.Print(loss, [loss], "loss", summarize=20)
 
   host_call = None
   if mode == tf.estimator.ModeKeys.TRAIN:
