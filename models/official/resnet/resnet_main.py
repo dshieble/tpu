@@ -139,10 +139,8 @@ flags.DEFINE_string(
     help='One of {"train_and_eval", "train", "eval"}.')
 
 flags.DEFINE_integer(
-    'train_steps', default=112603,
-    help=('The number of steps to use for training. Default is 112603 steps'
-          ' which is approximately 90 epochs at batch size 1024. This flag'
-          ' should be adjusted according to the --train_batch_size flag.'))
+    'train_steps', default=200000,
+    help=('The number of steps to use for training.'))
 
 flags.DEFINE_integer(
     'train_batch_size', default=1024, help='Batch size for training.')
