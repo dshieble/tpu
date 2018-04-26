@@ -458,6 +458,7 @@ def resnet_model_fn(features, labels, mode, params):
 
 
 def main(unused_argv):
+  FLAGS = flags.FLAGS
   tpu_grpc_url = None
   tpu_cluster_resolver = None
   if FLAGS.use_tpu:
@@ -589,5 +590,4 @@ def main(unused_argv):
 
 if __name__ == '__main__':
   tf.logging.set_verbosity(tf.logging.INFO)
-  FLAGS = flags.FLAGS
   tf.app.run()
