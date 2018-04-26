@@ -458,7 +458,11 @@ def resnet_model_fn(features, labels, mode, params):
 
 
 def main(unused_argv):
-  FLAGS = flags.FLAGS
+  
+
+  FLAGS._parse_flags()
+
+
   tpu_grpc_url = None
   tpu_cluster_resolver = None
   if FLAGS.use_tpu:
