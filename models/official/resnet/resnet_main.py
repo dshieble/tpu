@@ -348,8 +348,8 @@ def resnet_model_fn(features, labels, mode, params):
       [tf.nn.l2_loss(v) for v in tf.trainable_variables()
        if 'batch_normalization' not in v.name])
 
-  with tf.device("/cpu:0"):
-    loss = tf.Print(loss, [loss], "loss", summarize=20)
+  # with tf.device("/cpu:0"):
+  #   loss = tf.Print(loss, [loss], "loss", summarize=20)
 
   host_call = None
   if mode == tf.estimator.ModeKeys.TRAIN:
@@ -453,12 +453,16 @@ def resnet_model_fn(features, labels, mode, params):
 
     eval_metrics = (metric_fn, [labels, logits])
 
+  logging_hook = tf.train.LoggingTensorHook(
+    {"logging_hook_loss": loss}, every_n_iter=1)
+
   return tpu_estimator.TPUEstimatorSpec(
       mode=mode,
       loss=loss,
       train_op=train_op,
       host_call=host_call,
-      eval_metrics=eval_metrics)
+      eval_metrics=eval_metrics,
+      training_hooks=[logging_hook])
 
 
 def main(unused_argv):
