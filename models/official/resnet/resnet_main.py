@@ -372,7 +372,15 @@ def resnet_model_fn(features, labels, mode, params):
     # the train operation.
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
-      train_op = optimizer.minimize(loss, global_step)
+
+
+
+      
+      # train_op = optimizer.minimize(loss, global_step)
+      gvs = optimizer.compute_gradients(loss)
+      capped_gvs = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in gvs]
+      train_op = optimizer.apply_gradients(capped_gvs, global_step=global_step)
+
 
     if not FLAGS.skip_host_call:
       def host_call_fn(gs, loss, lr, ce):
@@ -453,8 +461,8 @@ def resnet_model_fn(features, labels, mode, params):
 
     eval_metrics = (metric_fn, [labels, logits])
 
-  logging_hook = tf.train.LoggingTensorHook(
-    {"logging_hook_loss": loss}, every_n_iter=1)
+  # logging_hook = tf.train.LoggingTensorHook(
+  #   {"logging_hook_loss": loss}, every_n_iter=1)
 
   return tpu_estimator.TPUEstimatorSpec(
       mode=mode,
@@ -462,7 +470,8 @@ def resnet_model_fn(features, labels, mode, params):
       train_op=train_op,
       host_call=host_call,
       eval_metrics=eval_metrics,
-      training_hooks=[logging_hook])
+      # training_hooks=[logging_hook]
+      )
 
 
 def main(unused_argv):
