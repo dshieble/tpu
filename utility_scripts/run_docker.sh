@@ -1,3 +1,4 @@
+# git pull; ./utility_scripts/run_docker.sh
 # Build the image and label it as tpu-example on the Docker registry on p3
 nvidia-docker build -t serrep1node.services.brown.edu:5000/tpu .
 
