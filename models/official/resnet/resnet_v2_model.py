@@ -238,6 +238,10 @@ class DrewResnet:
             name='%s_ATTENTION_intermediate' % name,
             training=training))
 
+    intermediate_activities = tf.Print(
+      intermediate_activities, [intermediate_activities], "intermediate_activities")
+
+
     # 3. FC layer with c / r channels + a nonlinearity
     if squash is not None:
       out_size = c
