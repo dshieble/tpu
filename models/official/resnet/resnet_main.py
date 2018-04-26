@@ -28,6 +28,15 @@ rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 tpu/models/o
   --train_batch_size 4 \
   --eval_batch_size 4
 
+----------------------------------------
+
+git pull; python models/official/resnet/resnet_main.py \
+  --use_tpu=false \
+  --data_dir=/media/data_cifs/fake_imagenet \
+  --model_dir=/media/data_cifs/resnet-tpu-paper-v2_50 \
+  --resnet_depth=paper-v2_50 \
+  --train_batch_size 256 \
+  --eval_batch_size 256 | tee -a resnet-tpu-paper-v2_50
 
 
 ----------------------------------------
