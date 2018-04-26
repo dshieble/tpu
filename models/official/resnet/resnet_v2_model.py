@@ -707,20 +707,21 @@ class DrewResnet:
           var_name,
           in_size=None,
           out_size=None):
-    value = initial_value
+    with tf.control_dependencies(None):
+      value = initial_value
 
-    if type(value) is list:
-      var = tf.get_variable(
-            name=var_name,
-            shape=value[0],
-            initializer=lambda: value[1],
-            trainable=self.trainable)
-    else:
-      var = tf.get_variable(
-            name=var_name,
-            initializer=lambda: value,
-            trainable=self.trainable)
-    # self.var_dict[(name, idx)] = var
+      if type(value) is list:
+        var = tf.get_variable(
+              name=var_name,
+              shape=value[0],
+              initializer=value[1],
+              trainable=self.trainable)
+      else:
+        var = tf.get_variable(
+              name=var_name,
+              initializer=value,
+              trainable=self.trainable)
+      # self.var_dict[(name, idx)] = var
     return var
 
 
