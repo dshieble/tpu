@@ -260,7 +260,7 @@ class DrewResnet:
         tf.expand_dims(output_activities, 1), 1)
     if return_map:
       return exp_activities
-    scaled_bottom = bottom * exp_activities
+    scaled_bottom = bottom * tf.cast(exp_activities, dtype=bottom.dtype)
 
     # 6. Add a loss term to compare scaled activity to clickmaps
     if combine == 'sum_abs':
