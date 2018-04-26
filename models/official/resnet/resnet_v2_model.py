@@ -684,7 +684,7 @@ class DrewResnet:
 
     # bottom = tf.Print(bottom, [bottom], "fc layer {}".format(name), summarize=20)
 
-    return tf.contrib.layers.fully_connected(bottom, out_size)
+    return tf.contrib.layers.fully_connected(bottom, out_size, scope=name)
 
     # """Method for creating a fully connected layer."""
     # assert name is not None, 'Supply a name for your operation.'
