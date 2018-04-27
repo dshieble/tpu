@@ -244,15 +244,25 @@ class DrewResnet:
     #   intermediate_activities, [intermediate_activities], "intermediate_activities")
 
     # 3. FC layer with c / r channels + a nonlinearity
-    if squash is not None:
-      out_size = c
-      output_activities = self.fc_layer(
+    out_size = c
+    output_activities = self.fc_layer(
         bottom=intermediate_activities,
         out_size=out_size,
         name='%s_ATTENTION_output' % name,
         training=training)
-    else:
-      output_activities = intermediate_activities
+    if squash is not None:
+        output_activities = self.fc_layer(
+            bottom=intermediate_activities,
+            out_size=out_size,
+            name='%s_ATTENTION_output' % name,
+            training=training)
+
+
+    # 5. Scale bottom with output_activities
+    exp_activities = tf.expand_dims(
+        tf.expand_dims(output_activities, 1), 1)
+    if return_map:
+      return exp_activities
 
     # 4. Add batch_norm to scaled activities
     if self.use_batchnorm:
@@ -265,13 +275,6 @@ class DrewResnet:
         scale=True,
         training=training,
         fused=True)
-
-    # 5. Scale bottom with output_activities
-    exp_activities = tf.expand_dims(
-        tf.expand_dims(output_activities, 1), 1)
-    if return_map:
-      return exp_activities
-
 
     scaled_bottom = bottom * exp_activities
 
