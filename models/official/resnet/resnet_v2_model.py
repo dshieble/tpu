@@ -361,7 +361,6 @@ class DrewResnet:
           squash=None,
           name=name,
           training=training,
-          batchnorm=False,
           r=r,
           return_map=True)
     if interaction == 'both':
