@@ -66,13 +66,21 @@ git pull; python3 models/official/resnet/resnet_main.py \
 
 gsutil mkdir gs://performances-tpu-paper-v2_50
 git pull; python3 models/official/resnet/resnet_main.py \
-  --iterations_per_loop=10 \
-  --base_learning_rate=0.01 \
+  --iterations_per_loop=100 \
+  --base_learning_rate=0.1 \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-paper-v2_50\
   --resnet_depth=paper-v2_50 | tee -a performances-tpu-paper-v2_50
 
+gsutil mkdir gs://performances-tpu-fc-v2_50
+git pull; python3 models/official/resnet/resnet_main.py \
+  --iterations_per_loop=100 \
+  --base_learning_rate=0.1 \
+  --tpu_name=demo-tpu \
+  --data_dir=gs://imagenet_data/train \
+  --model_dir=gs://performances-tpu-fc-v2_50\
+  --resnet_depth=fc-v2_50 | tee -a performances-tpu-fc-v2_50
 ------------------------------------------------------------
 
 

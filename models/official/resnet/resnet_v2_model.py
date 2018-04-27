@@ -250,6 +250,8 @@ class DrewResnet:
         out_size=out_size,
         name='%s_ATTENTION_output' % name,
         training=training)
+    else:
+      output_activities = intermediate_activities
 
     # 4. Add batch_norm to scaled activities
     if self.use_batchnorm:
@@ -268,8 +270,10 @@ class DrewResnet:
         tf.expand_dims(output_activities, 1), 1)
     if return_map:
       return exp_activities
-    # scaled_bottom = bottom * tf.cast(exp_activities, dtype=bottom.dtype)
+
+
     scaled_bottom = bottom * exp_activities
+
 
     # 6. Add a loss term to compare scaled activity to clickmaps
     if combine == 'sum_abs':
