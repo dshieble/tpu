@@ -290,123 +290,118 @@ class DrewResnet:
     self.attention_losses += [salience_bottom]
     return scaled_bottom
 
-  def feature_attention_fc(
-          self,
-          bottom,
-          intermediate_nl=tf.nn.tanh,
-          squash=tf.sigmoid,
-          name=None,
-          training=True,
-          extra_convs=2,
-          extra_conv_size=3,
-          dilation_rate=(1, 1),
-          intermediate_kernel=1,
-          normalize_output=False,
-          include_fa=True,
-          interaction='both',
-          r=4):
+  def feature_attention_fc(self,
+                            bottom,
+                            intermediate_nl=tf.nn.relu,
+                            squash=tf.sigmoid,
+                            name=None,
+                            training=True,
+                            batchnorm=False,
+                            extra_convs=1,
+                            extra_conv_size=5,
+                            dilation_rate=(1, 1),
+                            intermediate_kernel=1,
+                            normalize_output=False,
+                            include_fa=True,
+                            interaction='both',  # 'additive',  # 'both',
+                            r=16):
     """Fully convolutional form of https://arxiv.org/pdf/1709.01507.pdf"""
 
-    # 1. FC layer with c / r channels + a nonlinearity
-    c = int(bottom.get_shape()[-1])
-    intermediate_channels = int(c / r)
-    intermediate_activities = tf.layers.conv2d(
-        inputs=bottom,
+  # 1. FC layer with c / r channels + a nonlinearity
+  c = int(bottom.get_shape()[-1])
+  intermediate_channels = int(c / r)
+  intermediate_activities = tf.layers.conv2d(
+      inputs=bottom,
+      filters=intermediate_channels,
+      kernel_size=intermediate_kernel,
+      activation=intermediate_nl,
+      padding='SAME',
+      use_bias=True,
+      kernel_initializer=tf.variance_scaling_initializer(),
+      trainable=training,
+      name='%s_ATTENTION_intermediate' % name)
+
+  # 1a. Optionally add convolutions with spatial dimensions
+  if extra_convs:
+    for idx in range(extra_convs):
+      intermediate_activities = tf.layers.conv2d(
+        inputs=intermediate_activities,
         filters=intermediate_channels,
-        kernel_size=intermediate_kernel,
+        kernel_size=extra_conv_size,
         activation=intermediate_nl,
         padding='SAME',
         use_bias=True,
+        dilation_rate=dilation_rate,
         kernel_initializer=tf.variance_scaling_initializer(),
         trainable=training,
-        name='%s_ATTENTION_intermediate' % name)
+        name='%s_ATTENTION_intermediate_%s' % (name, idx))
 
-    # 1a. Optionally add convolutions with spatial dimensions
-    if extra_convs:
-        for idx in range(extra_convs):
-            if self.use_batchnorm:
-                intermediate_activities = self.batch_norm_relu(
-                    inputs=intermediate_activities,
-                    training=training,
-                    use_relu=False)
-            intermediate_activities = tf.layers.conv2d(
-                inputs=intermediate_activities,
-                filters=intermediate_channels,
-                kernel_size=extra_conv_size,
-                activation=intermediate_nl,
-                padding='SAME',
-                use_bias=True,
-                dilation_rate=dilation_rate,
-                kernel_initializer=tf.variance_scaling_initializer(),
-                trainable=training,
-                name='%s_ATTENTION_intermediate_%s' % (name, idx))
+  # 2. Spatial attention map
+  output_activities = tf.layers.conv2d(
+    inputs=intermediate_activities,
+    filters=1,  # c,
+    kernel_size=1,
+    padding='SAME',
+    use_bias=True,
+    activation=None,
+    kernel_initializer=tf.variance_scaling_initializer(),
+    trainable=training,
+    name='%s_ATTENTION_output' % name)
+  if batchnorm:
+    output_activities = self.batch_norm_relu(
+        inputs=output_activities,
+        training=training,
+        use_relu=False)
 
-    # 2. Spatial attention map
-    output_activities = tf.layers.conv2d(
-        inputs=intermediate_activities,
-        filters=1,  # c,
-        kernel_size=1,
-        padding='SAME',
-        use_bias=True,
-        activation=None,
-        kernel_initializer=tf.variance_scaling_initializer(),
-        trainable=training,
-        name='%s_ATTENTION_output' % name)
-    if self.use_batchnorm:
-        output_activities = self.batch_norm_relu(
-            inputs=output_activities,
-            training=training,
-            use_relu=False)
+  # Also calculate se attention
+  if include_fa:
+    fa_map = self.feature_attention(
+        bottom=bottom,
+        intermediate_nl=intermediate_nl,
+        squash=None,
+        name=name,
+        training=training,
+        batchnorm=False,
+        r=r,
+        return_map=True)
+  if interaction == 'both':
+    k = fa_map.get_shape().as_list()[-1]
+    alpha = tf.get_variable(
+        name='alpha_%s' % name,
+        shape=[1, 1, 1, k],
+        initializer=tf.variance_scaling_initializer())
+    beta = tf.get_variable(
+        name='beta_%s' % name,
+        shape=[1, 1, 1, k],
+        initializer=tf.variance_scaling_initializer())
+    additive = output_activities + fa_map
+    multiplicative = output_activities * fa_map
+    output_activities = alpha * additive + beta * multiplicative
+    # output_activities = output_activities * fa_map
+  elif interaction == 'multiplicative':
+    output_activities = output_activities * fa_map
+  elif interaction == 'additive':
+    output_activities = output_activities + fa_map
+  else:
+    raise NotImplementedError(interaction)
+  output_activities = squash(output_activities)
 
-    # Also calculate se attention
-    if include_fa:
-        fa_map = self.feature_attention(
-            bottom=bottom,
-            intermediate_nl=intermediate_nl,
-            squash=None,
-            name=name,
-            training=training,
-            r=r,
-            return_map=True)
-        if interaction == 'both':
-            k = fa_map.get_shape().as_list()[-1]
-            alpha = tf.get_variable(
-                name='alpha_%s' % name,
-                shape=[1, 1, 1, k],
-                initializer=tf.variance_scaling_initializer(),
-                dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-            beta = tf.get_variable(
-                name='beta_%s' % name,
-                shape=[1, 1, 1, k],
-                initializer=tf.variance_scaling_initializer(),
-                dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-            additive = output_activities + fa_map
-            multiplicative = output_activities * fa_map
-            output_activities = alpha * additive + beta * multiplicative
-            # output_activities = output_activities * fa_map
-        elif interaction == 'multiplicative':
-            output_activities = output_activities * fa_map
-        elif interaction == 'additive':
-            output_activities = output_activities + fa_map
-        else:
-            raise NotImplementedError(interaction)
-    output_activities = squash(output_activities)
+  # 3. Scale bottom with output_activities
+  scaled_bottom = bottom * output_activities
 
-    # 3. Scale bottom with output_activities
-    scaled_bottom = bottom * output_activities
+  # 4. Use attention for a clickme loss
+  if normalize_output:
+    norm = tf.sqrt(
+        tf.reduce_sum(
+            tf.pow(output_activities, 2),
+            axis=[1, 2],
+            keep_dims=True))
+    self.attention_losses += [
+        output_activities / (norm + 1e-12)]
+  else:
+    self.attention_losses += [output_activities]
+  return scaled_bottom
 
-    # 4. Use attention for a clickme loss
-    if normalize_output:
-        norm = tf.sqrt(
-            tf.reduce_sum(
-                tf.pow(output_activities, 2),
-                axis=[1, 2],
-                keep_dims=True))
-        self.attention_losses += [
-            output_activities / (norm + 1e-12)]
-    else:
-        self.attention_losses += [output_activities]
-    return scaled_bottom
 
   def batch_norm_relu(
           self,
