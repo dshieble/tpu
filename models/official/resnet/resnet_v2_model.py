@@ -373,11 +373,13 @@ class DrewResnet:
             alpha = tf.get_variable(
                 name='alpha_%s' % name,
                 shape=[1, 1, 1, k],
-                initializer=tf.variance_scaling_initializer())
+                initializer=tf.variance_scaling_initializer(),
+                dtype=tf.bfloat16 if self.use_tpu else tf.float32)
             beta = tf.get_variable(
                 name='beta_%s' % name,
                 shape=[1, 1, 1, k],
-                initializer=tf.variance_scaling_initializer())
+                initializer=tf.variance_scaling_initializer(),
+                dtype=tf.bfloat16 if self.use_tpu else tf.float32)
             additive = output_activities + fa_map
             multiplicative = output_activities * fa_map
             output_activities = alpha * additive + beta * multiplicative
