@@ -104,8 +104,9 @@ class DrewResnet:
     data_format = 'channels_last'
     # For bigger models, we want to use "bottleneck" layers
     if resnet_size < 50:
-      block_fn = self.building_block
-      final_size = 512
+      assert False
+      # block_fn = self.building_block
+      # final_size = 512
     else:
       block_fn = self.bottleneck_block
       final_size = 2048
@@ -484,62 +485,62 @@ class DrewResnet:
         kernel_initializer=tf.variance_scaling_initializer(),
         data_format=data_format)
 
-  def building_block(
-          self,
-          inputs,
-          filters,
-          training,
-          projection_shortcut,
-          strides,
-          data_format,
-          feature_attention=False,
-          block_id=None):
-    if self.apply_to == 'input':
-        if feature_attention == 'paper':
-            inputs = self.feature_attention(
-                bottom=inputs,
-                name=block_id,
-                training=training)
-        elif feature_attention == 'fc':
-            inputs = self.feature_attention_fc(
-                bottom=inputs,
-                name=block_id,
-                training=training,
-                squash=self.squash,
-                extra_convs=self.extra_convs)
-    shortcut = inputs
-    inputs = self.batch_norm_relu(inputs, training, data_format)
+  # def building_block(
+  #         self,
+  #         inputs,
+  #         filters,
+  #         training,
+  #         projection_shortcut,
+  #         strides,
+  #         data_format,
+  #         feature_attention=False,
+  #         block_id=None):
+  #   if self.apply_to == 'input':
+  #       if feature_attention == 'paper':
+  #           inputs = self.feature_attention(
+  #               bottom=inputs,
+  #               name=block_id,
+  #               training=training)
+  #       elif feature_attention == 'fc':
+  #           inputs = self.feature_attention_fc(
+  #               bottom=inputs,
+  #               name=block_id,
+  #               training=training,
+  #               squash=self.squash,
+  #               extra_convs=self.extra_convs)
+  #   shortcut = inputs
+  #   inputs = self.batch_norm_relu(inputs, training, data_format)
 
-    # The projection shortcut should come after the first batch norm and
-    # ReLU since it performs a 1x1 convolution.
-    if projection_shortcut is not None:
-        shortcut = projection_shortcut(inputs)
+  #   # The projection shortcut should come after the first batch norm and
+  #   # ReLU since it performs a 1x1 convolution.
+  #   if projection_shortcut is not None:
+  #       shortcut = projection_shortcut(inputs)
 
-    inputs = self.conv2d_fixed_padding(
-        inputs=inputs, filters=filters, kernel_size=3, strides=strides,
-        data_format=data_format)
+  #   inputs = self.conv2d_fixed_padding(
+  #       inputs=inputs, filters=filters, kernel_size=3, strides=strides,
+  #       data_format=data_format)
 
-    inputs = self.batch_norm_relu(inputs, training, data_format)
-    inputs = self.conv2d_fixed_padding(
-        inputs=inputs, filters=filters, kernel_size=3, strides=1,
-        data_format=data_format)
+  #   inputs = self.batch_norm_relu(inputs, training, data_format)
+  #   inputs = self.conv2d_fixed_padding(
+  #       inputs=inputs, filters=filters, kernel_size=3, strides=1,
+  #       data_format=data_format)
 
-    # Feature attention applied to the dense path
-    if self.apply_to == 'output':
-        if feature_attention == 'paper':
-            inputs = self.feature_attention(
-                bottom=inputs,
-                name=block_id,
-                training=training)
-        elif feature_attention == 'fc':
-            inputs = self.feature_attention_fc(
-                bottom=inputs,
-                name=block_id,
-                training=training,
-                squash=self.squash,
-                extra_convs=self.extra_convs)
+  #   # Feature attention applied to the dense path
+  #   if self.apply_to == 'output':
+  #       if feature_attention == 'paper':
+  #           inputs = self.feature_attention(
+  #               bottom=inputs,
+  #               name=block_id,
+  #               training=training)
+  #       elif feature_attention == 'fc':
+  #           inputs = self.feature_attention_fc(
+  #               bottom=inputs,
+  #               name=block_id,
+  #               training=training,
+  #               squash=self.squash,
+  #               extra_convs=self.extra_convs)
 
-    return inputs + shortcut
+  #   return inputs + shortcut
 
   def bottleneck_block(
           self,

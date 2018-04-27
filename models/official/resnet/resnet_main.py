@@ -318,6 +318,7 @@ def resnet_model_fn(features, labels, mode, params):
           num_classes=LABEL_CLASSES,
           feature_attention="paper",
           extra_convs=0,
+          apply_to="output",
           data_format=FLAGS.data_format,
           use_tpu=FLAGS.use_tpu)
     elif FLAGS.resnet_depth.startswith("fc-v2_"):
