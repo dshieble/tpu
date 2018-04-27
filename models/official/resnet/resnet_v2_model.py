@@ -296,7 +296,6 @@ class DrewResnet:
                             squash=tf.sigmoid,
                             name=None,
                             training=True,
-                            batchnorm=False,
                             extra_convs=1,
                             extra_conv_size=5,
                             dilation_rate=(1, 1),
@@ -306,6 +305,9 @@ class DrewResnet:
                             interaction='both',  # 'additive',  # 'both',
                             r=16):
     """Fully convolutional form of https://arxiv.org/pdf/1709.01507.pdf"""
+
+    print("bottom ", bottom)
+
 
     # 1. FC layer with c / r channels + a nonlinearity
     c = int(bottom.get_shape()[-1])
@@ -320,6 +322,9 @@ class DrewResnet:
         kernel_initializer=tf.variance_scaling_initializer(),
         trainable=training,
         name='%s_ATTENTION_intermediate' % name)
+
+    print("intermediate_activities 1 ", intermediate_activities)
+
 
     # 1a. Optionally add convolutions with spatial dimensions
     if extra_convs:
@@ -336,6 +341,9 @@ class DrewResnet:
           trainable=training,
           name='%s_ATTENTION_intermediate_%s' % (name, idx))
 
+    print("intermediate_activities 2 ", intermediate_activities)
+
+
     # 2. Spatial attention map
     output_activities = tf.layers.conv2d(
       inputs=intermediate_activities,
@@ -347,11 +355,18 @@ class DrewResnet:
       kernel_initializer=tf.variance_scaling_initializer(),
       trainable=training,
       name='%s_ATTENTION_output' % name)
-    if batchnorm:
+
+    print("output_activities 1 ", output_activities)
+
+
+    if self.use_batchnorm:
       output_activities = self.batch_norm_relu(
           inputs=output_activities,
           training=training,
           use_relu=False)
+
+    print("output_activities 2 ", output_activities)
+
 
     # Also calculate se attention
     if include_fa:
@@ -386,6 +401,10 @@ class DrewResnet:
     else:
       raise NotImplementedError(interaction)
     output_activities = squash(output_activities)
+
+
+    print("output_activities 3 ", output_activities)
+
 
     # 3. Scale bottom with output_activities
     scaled_bottom = bottom * output_activities
