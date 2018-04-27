@@ -24,7 +24,7 @@ import tensorflow as tf
 
 def resnet_v2(
     resnet_size, num_classes, feature_attention, data_format,
-    use_tpu, apply_to="input", extra_convs=0):
+    use_tpu, apply_to="input", extra_convs=1):
   return resnet_v2_generator(
     resnet_size=resnet_size, num_classes=num_classes,
     feature_attention=feature_attention, data_format=data_format, use_tpu=use_tpu,
