@@ -592,13 +592,13 @@ class DrewResnet:
     # Feature attention applied to the dense path
     if self.apply_to == 'output':
       if feature_attention == 'paper':
-          inputs = self.feature_attention(
+        inputs = self.feature_attention(
                 bottom=inputs,
                 name=block_id,
                 training=training)
       elif feature_attention == 'fc':
         print("\n\nOUTPUT ATTENTION\n\n")
-          inputs = self.feature_attention_fc(
+        inputs = self.feature_attention_fc(
                 bottom=inputs,
                 name=block_id,
                 training=training,
@@ -713,6 +713,7 @@ class DrewResnet:
     x = tf.reshape(bottom, [-1, in_size]) if len(bottom.get_shape()) > 2 else bottom
     out = tf.contrib.layers.fully_connected(x, out_size, scope=name)
     return out
+
     # """Method for creating a fully connected layer."""
     # assert name is not None, 'Supply a name for your operation.'
     # if in_size is None:
