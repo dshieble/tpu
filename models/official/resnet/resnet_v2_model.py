@@ -553,6 +553,7 @@ class DrewResnet:
           feature_attention=False,
           block_id=None):
     if self.apply_to == 'input':
+      print("\n\nOUTPUT ATTENTION\n\n")
       if feature_attention == 'paper':
         inputs = self.feature_attention(
           bottom=inputs,
@@ -596,6 +597,7 @@ class DrewResnet:
                 name=block_id,
                 training=training)
       elif feature_attention == 'fc':
+        print("\n\nOUTPUT ATTENTION\n\n")
           inputs = self.feature_attention_fc(
                 bottom=inputs,
                 name=block_id,
@@ -706,9 +708,11 @@ class DrewResnet:
       training=True):
 
     # bottom = tf.Print(bottom, [bottom], "fc layer {}".format(name), summarize=20)
-
-    return tf.contrib.layers.fully_connected(bottom, out_size, scope=name)
-
+    assert name is not None, 'Supply a name for your operation.'
+    in_size = int(bottom.get_shape()[-1])
+    x = tf.reshape(bottom, [-1, in_size]) if len(bottom.get_shape()) > 2 else bottom
+    out = tf.contrib.layers.fully_connected(x, out_size, scope=name)
+    return out
     # """Method for creating a fully connected layer."""
     # assert name is not None, 'Supply a name for your operation.'
     # if in_size is None:
