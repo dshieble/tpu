@@ -20,7 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
-
+from resnet_helpers import LayerHelper
 
 def resnet_v2(
     resnet_size, num_classes, feature_attention, data_format,
@@ -134,6 +134,9 @@ class DrewResnet:
     self.squash = squash
     self.extra_convs = extra_convs
     self.attention_losses = []
+
+    self.layer_helpers = LayerHelper(self.use_batchnorm, self.use_tpu, self.attention_losses)
+
     if isinstance(self.squash, str):
       self.squash = interpret_nl(self.squash)
 
@@ -211,221 +214,6 @@ class DrewResnet:
     setattr(self, self.probability_layer, prob)
     return dense_output
 
-  def feature_attention(
-          self,
-          bottom,
-          global_pooling=tf.reduce_mean,
-          # intermediate_nl=tf.nn.relu,
-          intermediate_nl=tf.nn.tanh,
-          squash=tf.sigmoid,
-          name=None,
-          training=True,
-          combine='sum_p',
-          _BATCH_NORM_DECAY=0.997,
-          _BATCH_NORM_EPSILON=1e-5,
-          r=4,
-          return_map=False):
-    """https://arxiv.org/pdf/1709.01507.pdf"""
-    # 1. Global pooling
-    mu = global_pooling(
-        bottom, reduction_indices=[1, 2], keep_dims=True)
-
-    # 2. FC layer with c / r channels + a nonlinearity
-    c = int(mu.get_shape()[-1])
-    intermediate_size = int(c / r)
-    intermediate_activities = intermediate_nl(
-        self.fc_layer(
-            bottom=tf.contrib.layers.flatten(mu),
-            out_size=intermediate_size,
-            name='%s_ATTENTION_intermediate' % name,
-            training=training))
-
-    # intermediate_activities = tf.Print(
-    #   intermediate_activities, [intermediate_activities], "intermediate_activities")
-
-    # 3. FC layer with c / r channels + a nonlinearity
-    out_size = c
-    output_activities = self.fc_layer(
-        bottom=intermediate_activities,
-        out_size=out_size,
-        name='%s_ATTENTION_output' % name,
-        training=training)
-    if squash is not None:
-        output_activities = self.fc_layer(
-            bottom=intermediate_activities,
-            out_size=out_size,
-            name='%s_ATTENTION_output' % name,
-            training=training)
-
-
-    # 5. Scale bottom with output_activities
-    exp_activities = tf.expand_dims(
-        tf.expand_dims(output_activities, 1), 1)
-    if return_map:
-      return exp_activities
-
-    # 4. Add batch_norm to scaled activities
-    if self.use_batchnorm:
-      bottom = tf.layers.batch_normalization(
-        inputs=bottom,
-        axis=3,
-        momentum=_BATCH_NORM_DECAY,
-        epsilon=_BATCH_NORM_EPSILON,
-        center=True,
-        scale=True,
-        training=training,
-        fused=True)
-
-    scaled_bottom = bottom * exp_activities
-
-
-    # 6. Add a loss term to compare scaled activity to clickmaps
-    if combine == 'sum_abs':
-      salience_bottom = tf.reduce_sum(
-            tf.abs(
-                scaled_bottom), axis=-1, keep_dims=True)
-    elif combine == 'sum_p':
-      salience_bottom = tf.reduce_sum(
-            tf.pow(
-                scaled_bottom, 2), axis=-1, keep_dims=True)
-    else:
-      raise NotImplementedError(
-            '%s combine not implmented.' % combine)
-    self.attention_losses += [salience_bottom]
-    return scaled_bottom
-
-  def feature_attention_fc(self,
-                            bottom,
-                            intermediate_nl=tf.nn.relu,
-                            squash=tf.sigmoid,
-                            name=None,
-                            training=True,
-                            extra_convs=1,
-                            extra_conv_size=5,
-                            dilation_rate=(1, 1),
-                            intermediate_kernel=1,
-                            normalize_output=False,
-                            include_fa=True,
-                            interaction='both',  # 'additive',  # 'both',
-                            r=16):
-    """Fully convolutional form of https://arxiv.org/pdf/1709.01507.pdf"""
-
-    print("bottom ", bottom)
-
-
-    # 1. FC layer with c / r channels + a nonlinearity
-    c = int(bottom.get_shape()[-1])
-    intermediate_channels = int(c / r)
-    intermediate_activities = tf.layers.conv2d(
-        inputs=bottom,
-        filters=intermediate_channels,
-        kernel_size=intermediate_kernel,
-        activation=intermediate_nl,
-        padding='SAME',
-        use_bias=True,
-        kernel_initializer=tf.variance_scaling_initializer(),
-        trainable=training,
-        name='%s_ATTENTION_intermediate' % name)
-
-    print("intermediate_activities 1 ", intermediate_activities)
-
-
-    # 1a. Optionally add convolutions with spatial dimensions
-    if extra_convs:
-      for idx in range(extra_convs):
-        intermediate_activities = tf.layers.conv2d(
-          inputs=intermediate_activities,
-          filters=intermediate_channels,
-          kernel_size=extra_conv_size,
-          activation=intermediate_nl,
-          padding='SAME',
-          use_bias=True,
-          dilation_rate=dilation_rate,
-          kernel_initializer=tf.variance_scaling_initializer(),
-          trainable=training,
-          name='%s_ATTENTION_intermediate_%s' % (name, idx))
-
-    print("intermediate_activities 2 ", intermediate_activities)
-
-
-    # 2. Spatial attention map
-    output_activities = tf.layers.conv2d(
-      inputs=intermediate_activities,
-      filters=1,  # c,
-      kernel_size=1,
-      padding='SAME',
-      use_bias=True,
-      activation=None,
-      kernel_initializer=tf.variance_scaling_initializer(),
-      trainable=training,
-      name='%s_ATTENTION_output' % name)
-
-    print("output_activities 1 ", output_activities)
-
-
-    if self.use_batchnorm:
-      output_activities = self.batch_norm_relu(
-          inputs=output_activities,
-          training=training,
-          use_relu=False)
-
-    print("output_activities 2 ", output_activities)
-
-
-    # Also calculate se attention
-    if include_fa:
-      fa_map = self.feature_attention(
-          bottom=bottom,
-          intermediate_nl=intermediate_nl,
-          squash=None,
-          name=name,
-          training=training,
-          r=r,
-          return_map=True)
-    if interaction == 'both':
-      k = fa_map.get_shape().as_list()[-1]
-      alpha = tf.get_variable(
-          name='alpha_%s' % name,
-          shape=[1, 1, 1, k],
-          initializer=tf.variance_scaling_initializer(),
-          dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-      beta = tf.get_variable(
-          name='beta_%s' % name,
-          shape=[1, 1, 1, k],
-          initializer=tf.variance_scaling_initializer(),
-          dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-      additive = output_activities + fa_map
-      multiplicative = output_activities * fa_map
-      output_activities = alpha * additive + beta * multiplicative
-      # output_activities = output_activities * fa_map
-    elif interaction == 'multiplicative':
-      output_activities = output_activities * fa_map
-    elif interaction == 'additive':
-      output_activities = output_activities + fa_map
-    else:
-      raise NotImplementedError(interaction)
-    output_activities = squash(output_activities)
-
-
-    print("output_activities 3 ", output_activities)
-
-
-    # 3. Scale bottom with output_activities
-    scaled_bottom = bottom * output_activities
-
-    # 4. Use attention for a clickme loss
-    if normalize_output:
-      norm = tf.sqrt(
-          tf.reduce_sum(
-              tf.pow(output_activities, 2),
-              axis=[1, 2],
-              keep_dims=True))
-      self.attention_losses += [
-          output_activities / (norm + 1e-12)]
-    else:
-      self.attention_losses += [output_activities]
-    return scaled_bottom
-
 
   def batch_norm_relu(
           self,
@@ -488,63 +276,6 @@ class DrewResnet:
         kernel_initializer=tf.variance_scaling_initializer(),
         data_format=data_format)
 
-  # def building_block(
-  #         self,
-  #         inputs,
-  #         filters,
-  #         training,
-  #         projection_shortcut,
-  #         strides,
-  #         data_format,
-  #         feature_attention=False,
-  #         block_id=None):
-  #   if self.apply_to == 'input':
-  #       if feature_attention == 'paper':
-  #           inputs = self.feature_attention(
-  #               bottom=inputs,
-  #               name=block_id,
-  #               training=training)
-  #       elif feature_attention == 'fc':
-  #           inputs = self.feature_attention_fc(
-  #               bottom=inputs,
-  #               name=block_id,
-  #               training=training,
-  #               squash=self.squash,
-  #               extra_convs=self.extra_convs)
-  #   shortcut = inputs
-  #   inputs = self.batch_norm_relu(inputs, training, data_format)
-
-  #   # The projection shortcut should come after the first batch norm and
-  #   # ReLU since it performs a 1x1 convolution.
-  #   if projection_shortcut is not None:
-  #       shortcut = projection_shortcut(inputs)
-
-  #   inputs = self.conv2d_fixed_padding(
-  #       inputs=inputs, filters=filters, kernel_size=3, strides=strides,
-  #       data_format=data_format)
-
-  #   inputs = self.batch_norm_relu(inputs, training, data_format)
-  #   inputs = self.conv2d_fixed_padding(
-  #       inputs=inputs, filters=filters, kernel_size=3, strides=1,
-  #       data_format=data_format)
-
-  #   # Feature attention applied to the dense path
-  #   if self.apply_to == 'output':
-  #       if feature_attention == 'paper':
-  #           inputs = self.feature_attention(
-  #               bottom=inputs,
-  #               name=block_id,
-  #               training=training)
-  #       elif feature_attention == 'fc':
-  #           inputs = self.feature_attention_fc(
-  #               bottom=inputs,
-  #               name=block_id,
-  #               training=training,
-  #               squash=self.squash,
-  #               extra_convs=self.extra_convs)
-
-  #   return inputs + shortcut
-
   def bottleneck_block(
           self,
           inputs,
@@ -558,12 +289,12 @@ class DrewResnet:
     if self.apply_to == 'input':
       print("\n\nOUTPUT ATTENTION\n\n")
       if feature_attention == 'paper':
-        inputs = self.feature_attention(
+        inputs = self.layer_helpers.feature_attention(
           bottom=inputs,
           name=block_id,
           training=training)
       elif feature_attention == 'fc':
-        inputs = self.feature_attention_fc(
+        inputs = self.layer_helpers.feature_attention_fc(
           bottom=inputs,
           name=block_id,
           training=training,
@@ -595,13 +326,13 @@ class DrewResnet:
     # Feature attention applied to the dense path
     if self.apply_to == 'output':
       if feature_attention == 'paper':
-        inputs = self.feature_attention(
+        inputs = self.layer_helpers.feature_attention(
                 bottom=inputs,
                 name=block_id,
                 training=training)
       elif feature_attention == 'fc':
         print("\n\nOUTPUT ATTENTION\n\n")
-        inputs = self.feature_attention_fc(
+        inputs = self.layer_helpers.feature_attention_fc(
                 bottom=inputs,
                 name=block_id,
                 training=training,
@@ -654,131 +385,6 @@ class DrewResnet:
         block_id='%s_%s' % (name, idx))
     return tf.identity(inputs, name)
 
-    # def conv_layer(
-    #         self,
-    #         bottom,
-    #         in_channels=None,
-    #         out_channels=None,
-    #         name=None,
-    #         training=True,
-    #         stride=1,
-    #         filter_size=3):
-    #   """Method for creating a convolutional layer."""
-    #   assert name is not None, 'Supply a name for your operation.'
-    #   if in_channels is None:
-    #     in_channels = int(bottom.get_shape()[-1])
-    #   with tf.variable_scope(name):
-    #     filt, conv_biases = self.get_conv_var(
-    #           filter_size=filter_size,
-    #           in_channels=in_channels,
-    #           out_channels=out_channels,
-    #           name=name)
-    #     conv = tf.nn.conv2d(
-    #           bottom,
-    #           filt,
-    #           [1, stride, stride, 1],
-    #           padding='SAME')
-    #     bias = tf.nn.bias_add(conv, conv_biases)
-    #     return bias
-
-    # def get_conv_var(
-    #     self,
-    #     filter_size,
-    #     in_channels,
-    #     out_channels,
-    #     name,
-    #     init_type='xavier'):
-    #   if init_type == 'xavier':
-    #     weight_init = [
-    #       [filter_size, filter_size, in_channels, out_channels],
-    #       tf.contrib.layers.xavier_initializer_conv2d(uniform=False)]
-    #   else:
-    #     weight_init = tf.truncated_normal(
-    #       [filter_size, filter_size, in_channels, out_channels], 0.0, 0.001)
-    #   bias_init = tf.truncated_normal([out_channels], .0, .001)
-    #   filters = self.get_var(weight_init, name, 0, name + "_filters")
-    #   biases = self.get_var(bias_init, name, 1, name + "_biases")
-
-    #   return filters, biases
-
-  def fc_layer(
-      self,
-      bottom,
-      in_size=None,
-      out_size=None,
-      name=None,
-      activation=True,
-      training=True):
-
-    # bottom = tf.Print(bottom, [bottom], "fc layer {}".format(name), summarize=20)
-    assert name is not None, 'Supply a name for your operation.'
-    in_size = int(bottom.get_shape()[-1])
-    x = tf.reshape(bottom, [-1, in_size]) if len(bottom.get_shape()) > 2 else bottom
-    out = tf.contrib.layers.fully_connected(x, out_size, scope=name)
-    return out
-
-    # """Method for creating a fully connected layer."""
-    # assert name is not None, 'Supply a name for your operation.'
-    # if in_size is None:
-    #   in_size = int(bottom.get_shape()[-1])
-    # with tf.variable_scope(name):
-    #   weights, biases = self.get_fc_var(in_size, out_size, name)
-    #   x = tf.reshape(bottom, [-1, in_size])
-    #   fc = tf.nn.bias_add(tf.matmul(x, weights), biases)
-    #   return fc
-
-  # def get_fc_var(
-  #         self,
-  #         in_size,
-  #         out_size,
-  #         name):
-  #   # if init_type == 'xavier':
-  #   #   weight_init = [[in_size, out_size], tf.contrib.layers.xavier_initializer(uniform=False)]
-  #   # else:
-  #   #   weight_init = tf.truncated_normal([in_size, out_size], 0.0, 0.001)
-  #   # bias_init = tf.truncated_normal([out_size], .0, .001)
-  #   # weights = self.get_var(weight_init, name, 0, name + "_weights")
-  #   # biases = self.get_var(bias_init, name, 1, name + "_biases")
-
-  #   weights = tf.get_variable(
-  #     name=name + "_weights",
-  #     shape=[in_size, out_size],
-  #     # initializer=tf.contrib.layers.xavier_initializer(uniform=False),
-  #     trainable=self.trainable,
-  #     dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-
-  #   biases = tf.get_variable(
-  #     name=name + "_biases",
-  #     shape=out_size,
-  #     # initializer=tf.truncated_normal_initializer(.0, .001),
-  #     trainable=self.trainable,
-  #     dtype=tf.bfloat16 if self.use_tpu else tf.float32)
-  #   return weights, biases
-
-  # def get_var(
-  #         self,
-  #         initial_value,
-  #         name,
-  #         idx,
-  #         var_name,
-  #         in_size=None,
-  #         out_size=None):
-  #   with tf.control_dependencies(None):
-  #     value = initial_value
-
-  #     if type(value) is list:
-  #       var = tf.get_variable(
-  #             name=var_name,
-  #             shape=value[0],
-  #             initializer=value[1],
-  #             trainable=self.trainable)
-  #     else:
-  #       var = tf.get_variable(
-  #             name=var_name,
-  #             initializer=value,
-  #             trainable=self.trainable)
-  #     # self.var_dict[(name, idx)] = var
-  #   return var
 
 
 def _get_block_sizes(resnet_size):

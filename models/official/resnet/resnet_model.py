@@ -24,6 +24,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from resnet_helpers import LayerHelper
+
 
 BATCH_NORM_DECAY = 0.9
 BATCH_NORM_EPSILON = 1e-5
@@ -127,7 +129,7 @@ def conv2d_fixed_padding(inputs, filters, kernel_size, strides,
       data_format=data_format)
 
 
-def residual_block(inputs, filters, is_training, strides,
+def residual_block(inputs, filters, is_training, strides, attention, use_tpu,
                    use_projection=False, data_format='channels_first'):
   """Standard building block for residual networks with BN after convolutions.
 
@@ -148,6 +150,7 @@ def residual_block(inputs, filters, is_training, strides,
   Returns:
     The output `Tensor` of the block.
   """
+  assert residual_block is None
   shortcut = inputs
   if use_projection:
     # Projection shortcut in first layer to match filters and strides
@@ -171,7 +174,7 @@ def residual_block(inputs, filters, is_training, strides,
   return tf.nn.relu(inputs + shortcut)
 
 
-def bottleneck_block(inputs, filters, is_training, strides,
+def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu,
                      use_projection=False, data_format='channels_first'):
   """Bottleneck block variant for residual networks with BN after convolutions.
 
@@ -192,6 +195,15 @@ def bottleneck_block(inputs, filters, is_training, strides,
   Returns:
     The output `Tensor` of the block.
   """
+  if residual_block == "paper":
+    inputs = LayerHelper(False, use_tpu, []).feature_attention(
+      bottom=inputs, name=None, training=is_training)
+  elif residual_block == "fc":
+    inputs = LayerHelper(False, use_tpu, []).feature_attention_fc(
+      bottom=inputs, name=None, training=is_training)
+  elif residual_block is not None:
+    assert False
+
   shortcut = inputs
   if use_projection:
     # Projection shortcut only in first block within a group. Bottleneck blocks
@@ -222,7 +234,7 @@ def bottleneck_block(inputs, filters, is_training, strides,
   return tf.nn.relu(inputs + shortcut)
 
 
-def block_group(inputs, filters, block_fn, blocks, strides, is_training, name,
+def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, attention, use_tpu,
                 data_format='channels_first'):
   """Creates one group of blocks for the ResNet model.
 
@@ -242,17 +254,17 @@ def block_group(inputs, filters, block_fn, blocks, strides, is_training, name,
     The output `Tensor` of the block layer.
   """
   # Only the first block per block_group uses projection shortcut and strides.
-  inputs = block_fn(inputs, filters, is_training, strides,
+  inputs = block_fn(inputs, filters, is_training, strides, attention=attention, use_tpu=use_tpu,
                     use_projection=True, data_format=data_format)
 
   for _ in range(1, blocks):
-    inputs = block_fn(inputs, filters, is_training, 1,
+    inputs = block_fn(inputs, filters, is_training, 1, attention=attention, use_tpu=use_tpu,
                       data_format=data_format)
 
   return tf.identity(inputs, name)
 
 
-def resnet_v1_generator(block_fn, layers, num_classes,
+def resnet_v1_generator(block_fn, layers, num_classes, attention, use_tpu,
                         data_format='channels_first'):
   """Generator for ResNet v1 models.
 
@@ -285,20 +297,20 @@ def resnet_v1_generator(block_fn, layers, num_classes,
 
     inputs = block_group(
         inputs=inputs, filters=64, block_fn=block_fn, blocks=layers[0],
-        strides=1, is_training=is_training, name='block_group1',
-        data_format=data_format)
+        strides=1, is_training=is_training, name='block_group1', attention=attention,
+        use_tpu=use_tpu, data_format=data_format)
     inputs = block_group(
         inputs=inputs, filters=128, block_fn=block_fn, blocks=layers[1],
-        strides=2, is_training=is_training, name='block_group2',
-        data_format=data_format)
+        strides=2, is_training=is_training, name='block_group2', attention=attention,
+        use_tpu=use_tpu, data_format=data_format)
     inputs = block_group(
         inputs=inputs, filters=256, block_fn=block_fn, blocks=layers[2],
-        strides=2, is_training=is_training, name='block_group3',
-        data_format=data_format)
+        strides=2, is_training=is_training, name='block_group3', attention=attention,
+        use_tpu=use_tpu, data_format=data_format)
     inputs = block_group(
         inputs=inputs, filters=512, block_fn=block_fn, blocks=layers[3],
-        strides=2, is_training=is_training, name='block_group4',
-        data_format=data_format)
+        strides=2, is_training=is_training, name='block_group4', attention=attention,
+        use_tpu=use_tpu, data_format=data_format)
 
     # The activation is 7x7 so this is a global average pool.
     inputs = tf.layers.average_pooling2d(
@@ -318,7 +330,7 @@ def resnet_v1_generator(block_fn, layers, num_classes,
   return model
 
 
-def resnet_v1(resnet_depth, num_classes, data_format='channels_first'):
+def resnet_v1(resnet_depth, num_classes, attention, use_tpu, data_format='channels_first'):
   """Returns the ResNet model for a given size and number of output classes."""
   model_params = {
       18: {'block': residual_block, 'layers': [2, 2, 2, 2]},
@@ -334,4 +346,4 @@ def resnet_v1(resnet_depth, num_classes, data_format='channels_first'):
 
   params = model_params[resnet_depth]
   return resnet_v1_generator(
-      params['block'], params['layers'], num_classes, data_format)
+      params['block'], params['layers'], num_classes, attention, use_tpu, data_format)

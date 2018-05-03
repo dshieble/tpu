@@ -81,6 +81,14 @@ git pull; python3 models/official/resnet/resnet_main.py \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-fc-v2_50\
   --resnet_depth=fc-v2_50 | tee -a performances-tpu-fc-v2_50
+
+gsutil mkdir gs://performances-tpu-v1_50
+git pull; python3 models/official/resnet/resnet_main.py \
+  --tpu_name=demo-tpu \
+  --data_dir=gs://imagenet_data/train \
+  --model_dir=gs://performances-tpu-v1_50 \
+  --resnet_depth=v1_50 | tee -a performances-tpu-v1_50
+
 ------------------------------------------------------------
 
 
@@ -295,12 +303,20 @@ def resnet_model_fn(features, labels, mode, params):
     scope_fn = lambda: tf.variable_scope("")
 
   with scope_fn():
-    if FLAGS.resnet_depth in ["18", "34", "50", "101", "152", "200"]:
+    if FLAGS.resnet_depth.startswith("v1_"):
+      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
+
       print("\n\n\n\n\nUSING RESNET V1 {}\n\n\n\n\n".format(FLAGS.resnet_depth))
       network = resnet_model.resnet_v1(
           resnet_depth=int(FLAGS.resnet_depth),
           num_classes=LABEL_CLASSES,
+          attention=None,
+          use_tpu=FLAGS.use_tpu,
           data_format=FLAGS.data_format)
+    elif FLAGS.resnet_depth.startswith("paper-v1_"):
+      assert False
+    elif FLAGS.resnet_depth.startswith("fc-v1_"):
+      assert False
     elif FLAGS.resnet_depth.startswith("v2_"):
       resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
       print("\n\n\n\n\nUSING RESNET V2 {}\n\n\n\n\n".format(resnet_size))
