@@ -195,13 +195,13 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu,
   Returns:
     The output `Tensor` of the block.
   """
-  if residual_block == "paper":
+  if attention == "paper":
     inputs = LayerHelper(False, use_tpu, []).feature_attention(
       bottom=inputs, name=None, training=is_training)
-  elif residual_block == "fc":
+  elif attention == "fc":
     inputs = LayerHelper(False, use_tpu, []).feature_attention_fc(
       bottom=inputs, name=None, training=is_training)
-  elif residual_block is not None:
+  elif attention is not None:
     assert False
 
   shortcut = inputs
