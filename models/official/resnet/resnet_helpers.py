@@ -53,9 +53,8 @@ class LayerHelper:
         output_activities = self.fc_layer(
             bottom=intermediate_activities,
             out_size=out_size,
-            name='%s_ATTENTION_output' % name,
+            name='%s_ATTENTION_output_squash_' % name,
             training=training)
-
 
     # 5. Scale bottom with output_activities
     exp_activities = tf.expand_dims(
@@ -77,19 +76,16 @@ class LayerHelper:
 
     scaled_bottom = bottom * exp_activities
 
-
     # 6. Add a loss term to compare scaled activity to clickmaps
     if combine == 'sum_abs':
       salience_bottom = tf.reduce_sum(
-            tf.abs(
-                scaled_bottom), axis=-1, keep_dims=True)
+        tf.abs(scaled_bottom), axis=-1, keep_dims=True)
     elif combine == 'sum_p':
       salience_bottom = tf.reduce_sum(
-            tf.pow(
-                scaled_bottom, 2), axis=-1, keep_dims=True)
+        tf.pow(scaled_bottom, 2), axis=-1, keep_dims=True)
     else:
       raise NotImplementedError(
-            '%s combine not implmented.' % combine)
+        '%s combine not implmented.' % combine)
     self.attention_losses += [salience_bottom]
     return scaled_bottom
 

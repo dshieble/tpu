@@ -20,6 +20,16 @@ python resnet_main.py \
   --model_dir=$MODEL_DIR \
   --resnet_depth=50
 
+
+rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/official/resnet/resnet_main.py \
+  --iterations_per_loop=1 \
+  --use_tpu=false \
+  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
+  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
+  --resnet_depth=v2_50 \
+  --train_batch_size 4 \
+  --eval_batch_size 4
+
 rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/official/resnet/resnet_main.py \
   --iterations_per_loop=1 \
   --use_tpu=false \
@@ -49,13 +59,6 @@ python3 models/official/resnet/resnet_main.py \
   --resnet_depth=paper-v2_50 \
   --train_batch_size 4 \
   --eval_batch_size 4 | tee output.txt
-
-gsutil mkdir gs://performances-tpu-50
-git pull; python3 models/official/resnet/resnet_main.py \
-  --tpu_name=demo-tpu \
-  --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-50 \
-  --resnet_depth=50 | tee -a performances-tpu-50.txt
 
 gsutil mkdir gs://performances-tpu-v2_50
 git pull; python3 models/official/resnet/resnet_main.py \
@@ -308,7 +311,7 @@ def resnet_model_fn(features, labels, mode, params):
 
       print("\n\n\n\n\nUSING RESNET V1 {}\n\n\n\n\n".format(FLAGS.resnet_depth))
       network = resnet_model.resnet_v1(
-          resnet_depth=int(FLAGS.resnet_depth),
+          resnet_depth=int(resnet_size),
           num_classes=LABEL_CLASSES,
           attention=None,
           use_tpu=FLAGS.use_tpu,
@@ -324,6 +327,7 @@ def resnet_model_fn(features, labels, mode, params):
           resnet_size=resnet_size,
           num_classes=LABEL_CLASSES,
           feature_attention=False,
+          extra_convs=0,
           data_format=FLAGS.data_format,
           use_tpu=FLAGS.use_tpu)
     elif FLAGS.resnet_depth.startswith("paper-v2_"):
