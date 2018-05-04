@@ -129,7 +129,7 @@ def conv2d_fixed_padding(inputs, filters, kernel_size, strides,
       data_format=data_format)
 
 
-def residual_block(inputs, filters, is_training, strides, attention, use_tpu,
+def residual_block(inputs, filters, is_training, strides, attention, use_tpu, name,
                    use_projection=False, data_format='channels_first'):
   """Standard building block for residual networks with BN after convolutions.
 
@@ -174,7 +174,7 @@ def residual_block(inputs, filters, is_training, strides, attention, use_tpu,
   return tf.nn.relu(inputs + shortcut)
 
 
-def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu,
+def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, name,
                      use_projection=False, data_format='channels_first'):
   """Bottleneck block variant for residual networks with BN after convolutions.
 
@@ -197,10 +197,10 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu,
   """
   if attention == "paper":
     inputs = LayerHelper(False, use_tpu, []).feature_attention(
-      bottom=inputs, name=None, training=is_training)
+      bottom=inputs, name=name, training=is_training)
   elif attention == "fc":
     inputs = LayerHelper(False, use_tpu, []).feature_attention_fc(
-      bottom=inputs, name=None, training=is_training)
+      bottom=inputs, name=name, training=is_training)
   elif attention is not None:
     assert False
 
@@ -255,11 +255,11 @@ def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, a
   """
   # Only the first block per block_group uses projection shortcut and strides.
   inputs = block_fn(inputs, filters, is_training, strides, attention=attention, use_tpu=use_tpu,
-                    use_projection=True, data_format=data_format)
+                    name=name, use_projection=True, data_format=data_format)
 
   for _ in range(1, blocks):
     inputs = block_fn(inputs, filters, is_training, 1, attention=attention, use_tpu=use_tpu,
-                      data_format=data_format)
+                      name=name, data_format=data_format)
 
   return tf.identity(inputs, name)
 
