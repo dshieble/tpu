@@ -320,9 +320,8 @@ def resnet_model_fn(features, labels, mode, params):
     scope_fn = lambda: tf.variable_scope("")
 
   with scope_fn():
+    resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
     if FLAGS.resnet_depth.startswith("v1_"):
-      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
-
       print("\n\n\n\n\nUSING RESNET V1 {}\n\n\n\n\n".format(FLAGS.resnet_depth))
       network = resnet_model.resnet_v1(
           resnet_depth=int(resnet_size),
@@ -331,6 +330,7 @@ def resnet_model_fn(features, labels, mode, params):
           use_tpu=FLAGS.use_tpu,
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("paper-v1_"):
+      print("\n\n\n\n\nUSING RESNET V1 (Paper) {}\n\n\n\n\n".format(resnet_size))
       network = resnet_model.resnet_v1(
           resnet_depth=int(resnet_size),
           num_classes=LABEL_CLASSES,
@@ -338,6 +338,7 @@ def resnet_model_fn(features, labels, mode, params):
           use_tpu=FLAGS.use_tpu,
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("fc-v1_"):
+      print("\n\n\n\n\nUSING RESNET V1 (fc) {}\n\n\n\n\n".format(resnet_size))
       network = resnet_model.resnet_v1(
           resnet_depth=int(resnet_size),
           num_classes=LABEL_CLASSES,
@@ -345,7 +346,6 @@ def resnet_model_fn(features, labels, mode, params):
           use_tpu=FLAGS.use_tpu,
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("v2_"):
-      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
       print("\n\n\n\n\nUSING RESNET V2 {}\n\n\n\n\n".format(resnet_size))
       network = resnet_v2_model.resnet_v2(
           resnet_size=resnet_size,
@@ -355,7 +355,6 @@ def resnet_model_fn(features, labels, mode, params):
           data_format=FLAGS.data_format,
           use_tpu=FLAGS.use_tpu)
     elif FLAGS.resnet_depth.startswith("paper-v2_"):
-      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
       print("\n\n\n\n\nUSING RESNET V2 (Paper) {}\n\n\n\n\n".format(resnet_size))
       network = resnet_v2_model.resnet_v2(
           resnet_size=resnet_size,
@@ -366,7 +365,6 @@ def resnet_model_fn(features, labels, mode, params):
           data_format=FLAGS.data_format,
           use_tpu=FLAGS.use_tpu)
     elif FLAGS.resnet_depth.startswith("fc-v2_"):
-      resnet_size = int(FLAGS.resnet_depth.split("_")[-1])
       print("\n\n\n\n\nUSING RESNET V2 (fc) {}\n\n\n\n\n".format(resnet_size))
       network = resnet_v2_model.resnet_v2(
           resnet_size=resnet_size,
