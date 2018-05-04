@@ -201,10 +201,7 @@ class LayerHelper:
       raise NotImplementedError(interaction)
     output_activities = squash(output_activities)
 
-
     print("output_activities 3 ", output_activities)
-
-
     # 3. Scale bottom with output_activities
     scaled_bottom = bottom * output_activities
 
@@ -221,8 +218,6 @@ class LayerHelper:
       self.attention_losses += [output_activities]
     return scaled_bottom
 
-    
-    
   def fc_layer(
       self,
       bottom,
