@@ -31,6 +31,17 @@ BATCH_NORM_DECAY = 0.9
 BATCH_NORM_EPSILON = 1e-5
 
 
+def add_attention(inputs, attention, use_tpu, name, is_training):
+  if attention == "paper":
+    inputs = LayerHelper(False, use_tpu, []).feature_attention(
+      bottom=inputs, name=name, training=is_training)
+  elif attention == "fc":
+    inputs = LayerHelper(False, use_tpu, []).feature_attention_fc(
+      bottom=inputs, name=name, training=is_training)
+  elif attention is not None:
+    assert False
+  return inputs
+
 def batch_norm_relu(inputs, is_training, relu=True, init_zero=False,
                     data_format='channels_first'):
   """Performs a batch normalization followed by a ReLU.
@@ -129,7 +140,7 @@ def conv2d_fixed_padding(inputs, filters, kernel_size, strides,
       data_format=data_format)
 
 
-def residual_block(inputs, filters, is_training, strides, attention, use_tpu, name,
+def residual_block(inputs, filters, is_training, strides, attention, use_tpu, name, apply_to,
                    use_projection=False, data_format='channels_first'):
   """Standard building block for residual networks with BN after convolutions.
 
@@ -174,7 +185,7 @@ def residual_block(inputs, filters, is_training, strides, attention, use_tpu, na
   return tf.nn.relu(inputs + shortcut)
 
 
-def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, name,
+def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, name, apply_to,
                      use_projection=False, data_format='channels_first'):
   """Bottleneck block variant for residual networks with BN after convolutions.
 
@@ -195,14 +206,8 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, 
   Returns:
     The output `Tensor` of the block.
   """
-  if attention == "paper":
-    inputs = LayerHelper(False, use_tpu, []).feature_attention(
-      bottom=inputs, name=name, training=is_training)
-  elif attention == "fc":
-    inputs = LayerHelper(False, use_tpu, []).feature_attention_fc(
-      bottom=inputs, name=name, training=is_training)
-  elif attention is not None:
-    assert False
+  if apply_to == 'input':
+    inputs = add_attention(inputs, attention, use_tpu, name, is_training)
 
   shortcut = inputs
   if use_projection:
@@ -231,11 +236,14 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, 
   inputs = batch_norm_relu(inputs, is_training, relu=False, init_zero=True,
                            data_format=data_format)
 
-  return tf.nn.relu(inputs + shortcut)
+  if apply_to == 'output':
+    inputs = add_attention(inputs, attention, use_tpu, name, is_training)
+  return inputs + shortcut
+  # return tf.nn.relu(inputs + shortcut)
 
 
 def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, attention, use_tpu,
-                data_format='channels_first'):
+  apply_to, data_format='channels_first'):
   """Creates one group of blocks for the ResNet model.
 
   Args:
@@ -255,16 +263,16 @@ def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, a
   """
   # Only the first block per block_group uses projection shortcut and strides.
   inputs = block_fn(inputs, filters, is_training, strides, attention=attention, use_tpu=use_tpu,
-                    name=name, use_projection=True, data_format=data_format)
+                    name=name, apply_to=apply_to, use_projection=True, data_format=data_format)
 
   for i in range(1, blocks):
-    inputs = block_fn(inputs, filters, is_training, 1, attention=attention, use_tpu=use_tpu,
-                      name="{}_{}".format(name, i), data_format=data_format)
+    inputs = block_fn(inputs, filters, is_training, 1, attention=None, use_tpu=use_tpu,
+                      name="{}_{}".format(name, i), apply_to=apply_to, data_format=data_format)
 
   return tf.identity(inputs, name)
 
 
-def resnet_v1_generator(block_fn, layers, num_classes, attention, use_tpu,
+def resnet_v1_generator(block_fn, layers, num_classes, attention, use_tpu, apply_to,
                         data_format='channels_first'):
   """Generator for ResNet v1 models.
 
@@ -298,19 +306,19 @@ def resnet_v1_generator(block_fn, layers, num_classes, attention, use_tpu,
     inputs = block_group(
         inputs=inputs, filters=64, block_fn=block_fn, blocks=layers[0],
         strides=1, is_training=is_training, name='block_group1', attention=attention,
-        use_tpu=use_tpu, data_format=data_format)
+        use_tpu=use_tpu, apply_to=apply_to, data_format=data_format)
     inputs = block_group(
         inputs=inputs, filters=128, block_fn=block_fn, blocks=layers[1],
         strides=2, is_training=is_training, name='block_group2', attention=attention,
-        use_tpu=use_tpu, data_format=data_format)
+        use_tpu=use_tpu, apply_to=apply_to, data_format=data_format)
     inputs = block_group(
         inputs=inputs, filters=256, block_fn=block_fn, blocks=layers[2],
         strides=2, is_training=is_training, name='block_group3', attention=attention,
-        use_tpu=use_tpu, data_format=data_format)
+        use_tpu=use_tpu, apply_to=apply_to, data_format=data_format)
     inputs = block_group(
         inputs=inputs, filters=512, block_fn=block_fn, blocks=layers[3],
         strides=2, is_training=is_training, name='block_group4', attention=attention,
-        use_tpu=use_tpu, data_format=data_format)
+        use_tpu=use_tpu, apply_to=apply_to, data_format=data_format)
 
     # The activation is 7x7 so this is a global average pool.
     inputs = tf.layers.average_pooling2d(
@@ -330,7 +338,8 @@ def resnet_v1_generator(block_fn, layers, num_classes, attention, use_tpu,
   return model
 
 
-def resnet_v1(resnet_depth, num_classes, attention, use_tpu, data_format='channels_first'):
+def resnet_v1(resnet_depth, num_classes, attention, use_tpu, apply_to,
+  data_format='channels_first'):
   """Returns the ResNet model for a given size and number of output classes."""
   model_params = {
       18: {'block': residual_block, 'layers': [2, 2, 2, 2]},
@@ -340,10 +349,11 @@ def resnet_v1(resnet_depth, num_classes, attention, use_tpu, data_format='channe
       152: {'block': bottleneck_block, 'layers': [3, 8, 36, 3]},
       200: {'block': bottleneck_block, 'layers': [3, 24, 36, 3]}
   }
+  assert apply_to in ["inputs", "outputs"]
 
   if resnet_depth not in model_params:
     raise ValueError('Not a valid resnet_depth:', resnet_depth)
 
   params = model_params[resnet_depth]
   return resnet_v1_generator(
-      params['block'], params['layers'], num_classes, attention, use_tpu, data_format)
+      params['block'], params['layers'], num_classes, attention, use_tpu, apply_to, data_format)
