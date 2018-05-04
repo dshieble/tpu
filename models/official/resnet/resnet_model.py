@@ -206,7 +206,7 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, 
   Returns:
     The output `Tensor` of the block.
   """
-  if apply_to == 'input':
+  if apply_to == 'inputs':
     inputs = add_attention(inputs, attention, use_tpu, name, is_training)
 
   shortcut = inputs
@@ -236,7 +236,7 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, 
   inputs = batch_norm_relu(inputs, is_training, relu=False, init_zero=True,
                            data_format=data_format)
 
-  if apply_to == 'output':
+  if apply_to == 'outputs':
     inputs = add_attention(inputs, attention, use_tpu, name, is_training)
   return inputs + shortcut
   # return tf.nn.relu(inputs + shortcut)
