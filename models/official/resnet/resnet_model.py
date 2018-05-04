@@ -257,9 +257,9 @@ def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, a
   inputs = block_fn(inputs, filters, is_training, strides, attention=attention, use_tpu=use_tpu,
                     name=name, use_projection=True, data_format=data_format)
 
-  for _ in range(1, blocks):
+  for i in range(1, blocks):
     inputs = block_fn(inputs, filters, is_training, 1, attention=attention, use_tpu=use_tpu,
-                      name=name, data_format=data_format)
+                      name="{}_{}".format(name, i), data_format=data_format)
 
   return tf.identity(inputs, name)
 
