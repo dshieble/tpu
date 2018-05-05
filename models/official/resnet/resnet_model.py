@@ -238,8 +238,8 @@ def bottleneck_block(inputs, filters, is_training, strides, attention, use_tpu, 
 
   if apply_to == 'outputs':
     inputs = add_attention(inputs, attention, use_tpu, name, is_training)
-  return inputs + shortcut
-  # return tf.nn.relu(inputs + shortcut)
+  # return inputs + shortcut
+  return tf.nn.relu(inputs + shortcut)
 
 
 def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, attention, use_tpu,
@@ -266,7 +266,7 @@ def block_group(inputs, filters, block_fn, blocks, strides, is_training, name, a
                     name=name, apply_to=apply_to, use_projection=True, data_format=data_format)
 
   for i in range(1, blocks):
-    inputs = block_fn(inputs, filters, is_training, 1, attention=attention, use_tpu=use_tpu,
+    inputs = block_fn(inputs, filters, is_training, 1, attention=None, use_tpu=use_tpu,
                       name="{}_{}".format(name, i), apply_to=apply_to, data_format=data_format)
 
   return tf.identity(inputs, name)
