@@ -99,11 +99,21 @@ git pull; python3 models/official/resnet/resnet_main.py \
 
 gsutil rm -r gs://performances-tpu-paper-v1_50; gsutil mkdir gs://performances-tpu-paper-v1_50;
 git pull; python3 models/official/resnet/resnet_main.py \
-  --steps_per_eval 1000 \
+  --steps_per_eval 5000 \
   --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
   --model_dir=gs://performances-tpu-paper-v1_50\
   --resnet_depth=paper-v1_50 | tee -a performances-tpu-paper-v1_50
+
+
+
+gsutil rm -r gs://performances-tpu-fc-v1_50; gsutil mkdir gs://performances-tpu-fc-v1_50;
+git pull; python3 models/official/resnet/resnet_main.py \
+  --steps_per_eval 5000 \
+  --tpu_name=demo-tpu \
+  --data_dir=gs://imagenet_data/train \
+  --model_dir=gs://performances-tpu-fc-v1_50\
+  --resnet_depth=fc-v1_50 | tee -a performances-tpu-fc-v1_50
 
 ------------------------------------------------------------
 
@@ -326,6 +336,7 @@ def resnet_model_fn(features, labels, mode, params):
           resnet_depth=int(resnet_size),
           num_classes=LABEL_CLASSES,
           attention=None,
+          apply_to="outputs",
           use_tpu=FLAGS.use_tpu,
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("paper-v1_"):
@@ -343,6 +354,7 @@ def resnet_model_fn(features, labels, mode, params):
           resnet_depth=int(resnet_size),
           num_classes=LABEL_CLASSES,
           attention="fc",
+          apply_to="outputs",
           use_tpu=FLAGS.use_tpu,
           data_format=FLAGS.data_format)
     elif FLAGS.resnet_depth.startswith("v2_"):
