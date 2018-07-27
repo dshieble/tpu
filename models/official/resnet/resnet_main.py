@@ -14,109 +14,46 @@
 # ==============================================================================
 """Train a ResNet-50 model on ImageNet on TPU.
 
-python resnet_main.py \
+
+
+RESNETDEPTH=v2_152; \
+BUCKET=gs://performances-tpu-$RESNETDEPTH; \
+gsutil rm -r $BUCKET; gsutil mkdir $BUCKET; \
+git pull; python3 models/official/resnet/resnet_main.py \
   --tpu_name=$TPU_NAME \
-  --data_dir=$DATA_DIR \
-  --model_dir=$MODEL_DIR \
-  --resnet_depth=50
-
-
-rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/official/resnet/resnet_main.py \
-  --iterations_per_loop=1 \
-  --use_tpu=false \
-  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
-  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
-  --resnet_depth=v2_50 \
-  --train_batch_size 4 \
-  --eval_batch_size 4
-
-rm -rf /Users/dshiebler/workspace/image_modeling/ckptsum/*; python3 models/official/resnet/resnet_main.py \
-  --iterations_per_loop=1 \
-  --use_tpu=false \
-  --data_dir=/Users/dshiebler/workspace/image_modeling/fake_imagenet \
-  --model_dir=/Users/dshiebler/workspace/image_modeling/ckptsum \
-  --resnet_depth=paper-v2_50 \
-  --train_batch_size 4 \
-  --eval_batch_size 4
-
-----------------------------------------
-
-git pull; CUDA_VISIBLE_DEVICES=0; python models/official/resnet/resnet_main.py \
-  --use_tpu=false \
-  --data_dir=/media/data_cifs/fake_imagenet \
-  --model_dir=/media/data_cifs/resnet-tpu-paper-v2_50 \
-  --resnet_depth=paper-v2_50 \
-  --train_batch_size 256 \
-  --eval_batch_size 256 | tee -a resnet-tpu-paper-v2_50
-
-
-----------------------------------------
-
-python3 models/official/resnet/resnet_main.py \
-  --use_tpu=false \
-  --data_dir= /media/data_cifs/clicktionary/clickme_experiment/tf_records/ \
-  --model_dir=/mnt/disks/data_cifs/performances/cpu-paper-v2_50 \
-  --resnet_depth=paper-v2_50 \
-  --train_batch_size 4 \
-  --eval_batch_size 4 | tee output.txt
-
-gsutil mkdir gs://performances-tpu-v2_50
-git pull; python3 models/official/resnet/resnet_main.py \
-  --tpu_name=demo-tpu \
   --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-v2_50 \
-  --resnet_depth=v2_50 | tee -a performances-tpu-v2_50
+  --model_dir=gs://performances-tpu-$RESNETDEPTH \
+  --resnet_depth=$RESNETDEPTH | tee -a performances-tpu-$RESNETDEPTH
 
-
-gsutil mkdir gs://performances-tpu-paper-v2_50
+RESNETDEPTH=fc-v2_152; \
+BUCKET=gs://performances-tpu-$RESNETDEPTH; \
+gsutil rm -r $BUCKET; gsutil mkdir $BUCKET; \
 git pull; python3 models/official/resnet/resnet_main.py \
-  --steps_per_eval 1000 \
-  --tpu_name=demo-tpu \
+  --tpu_name=$TPU_NAME \
   --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-paper-v2_50\
-  --resnet_depth=paper-v2_50 | tee -a performances-tpu-paper-v2_50
+  --model_dir=gs://performances-tpu-$RESNETDEPTH \
+  --clip_gradients 100 \
+  --resnet_depth=$RESNETDEPTH | tee -a performances-tpu-$RESNETDEPTH
 
-gsutil mkdir gs://performances-tpu-fc-v2_50
+RESNETDEPTH=paper-v2_152; \
+BUCKET=gs://performances-tpu-$RESNETDEPTH; \
+gsutil rm -r $BUCKET; gsutil mkdir $BUCKET; \
 git pull; python3 models/official/resnet/resnet_main.py \
-  --iterations_per_loop=100 \
-  --base_learning_rate=0.1 \
-  --tpu_name=demo-tpu \
+  --tpu_name=$TPU_NAME \
   --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-fc-v2_50\
-  --resnet_depth=fc-v2_50 | tee -a performances-tpu-fc-v2_50
+  --model_dir=gs://performances-tpu-$RESNETDEPTH \
+  --resnet_depth=$RESNETDEPTH | tee -a performances-tpu-$RESNETDEPTH
 
 
-
-
-gsutil mkdir gs://performances-tpu-v1_50
+RESNETDEPTH=fc-v2_152; \
+BUCKET=gs://performances-tpu-$RESNETDEPTH-aa; \
+gsutil rm -r $BUCKET; gsutil mkdir $BUCKET; \
 git pull; python3 models/official/resnet/resnet_main.py \
-  --tpu_name=demo-tpu \
+  --tpu_name=$TPU_NAME \
   --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-v1_50 \
-  --resnet_depth=v1_50 | tee -a performances-tpu-v1_50
-
-
-
-gsutil rm -r gs://performances-tpu-paper-v1_50; gsutil mkdir gs://performances-tpu-paper-v1_50;
-git pull; python3 models/official/resnet/resnet_main.py \
-  --steps_per_eval 5000 \
-  --tpu_name=demo-tpu \
-  --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-paper-v1_50\
-  --resnet_depth=paper-v1_50 | tee -a performances-tpu-paper-v1_50
-
-
-
-gsutil rm -r gs://performances-tpu-fc-v1_50; gsutil mkdir gs://performances-tpu-fc-v1_50;
-git pull; python3 models/official/resnet/resnet_main.py \
-  --steps_per_eval 5000 \
-  --tpu_name=demo-tpu \
-  --data_dir=gs://imagenet_data/train \
-  --model_dir=gs://performances-tpu-fc-v1_50\
-  --resnet_depth=fc-v1_50 | tee -a performances-tpu-fc-v1_50
-
-------------------------------------------------------------
-
+  --model_dir=$BUCKET \
+  --clip_gradients 5 \
+  --resnet_depth=$RESNETDEPTH | tee -a performances-tpu-$RESNETDEPTH
 
 
 
@@ -452,7 +389,8 @@ def resnet_model_fn(features, labels, mode, params):
         print("\nclipping gradients\n")
         gradients, variables = zip(*optimizer.compute_gradients(loss))
         gradients, _ = tf.clip_by_global_norm(gradients, FLAGS.clip_gradients)
-        train_op = optimizer.apply_gradients(zip(gradients, variables))
+        train_op = optimizer.apply_gradients(zip(gradients, variables),
+          global_step=global_step)
 
       # gvs = optimizer.compute_gradients(loss)
       # gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
